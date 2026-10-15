@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function userProfile(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function userRole(uid) {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(uid))
+        ? userProfile(uid).data.role
+        : 'STUDENT';
+    }
+
+    function isTeacherOrClassPresident() {
+      return isSignedIn() && (
+        userRole(request.auth.uid) == 'TEACHER' ||
+        userRole(request.auth.uid) == 'CLASS_PRESIDENT'
+      );
+    }
+
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isTeacherOrClassPresident();
+    }
+
+    match /users/{uid} {
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.email is string
+        && request.resource.data.classId is string
+        && request.resource.data.role == 'STUDENT';
+      allow read: if isOwner(uid);
+      allow update: if isOwner(uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.classId == resource.data.classId;
+      allow delete: if false;
+    }
+
+    match /homework/{homeworkId} {
+      allow read: if isSignedIn();
+      allow create, update: if isTeacherOrClassPresident();
+      allow delete: if isTeacherOrClassPresident();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow create, update: if isTeacherOrClassPresident();
+      allow delete: if isTeacherOrClassPresident();
+    }
+
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow create, update: if isTeacherOrClassPresident();
+      allow delete: if isTeacherOrClassPresident();
+    }
+
+    match /tests/{testId} {
+      allow read: if isSignedIn();
+      allow create, update: if isTeacherOrClassPresident();
+      allow delete: if isTeacherOrClassPresident();
+    }
+
+    match /xpTransactions/{transactionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /aiUsage/{usageId} {
+      allow read: if isSignedIn();
+      allow create, update: if isTeacherOrClassPresident();
+      allow delete: if isTeacherOrClassPresident();
+    }
+  }
+}
