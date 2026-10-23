@@ -15,6 +15,7 @@ const fallbackAnnouncements = announcementFeed.map((item) => ({
   updatedAt: new Date().toISOString(),
   archived: false,
   meta: item.meta,
+  isSample: true,
 }));
 
 export async function GET() {
@@ -50,6 +51,7 @@ export async function GET() {
         updatedAt: data.updatedAt || new Date().toISOString(),
         archived: !!data.archived,
         meta: data.meta || `${data.createdBy ? 'Shared by ' + data.createdBy : 'Shared'} · ${new Date(data.createdAt || Date.now()).toLocaleDateString()}`,
+        isSample: false,
       };
     });
 

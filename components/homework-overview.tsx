@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import { demoAssignments } from '@/lib/mock-data';
 import type { HomeworkRecord } from '@/lib/firestore-schema';
+import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase';
+import { getClassHomework } from '@/lib/homework-client';
 
 type Assignment = Pick<HomeworkRecord, 'title' | 'subjectId' | 'dueDate' | 'dueTime' | 'priority' | 'description'> & {
   id?: string;
@@ -35,16 +38,12 @@ export function HomeworkOverview() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    async function loadAssignments() {
+    const loadAssignments = async (isSignedIn: boolean) => {
+      setError('');
       try {
-        const response = await fetch('/api/homework', { cache: 'no-store' });
-        const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload.error || 'Could not load assignments.');
-        }
-
-        const activeItems: Assignment[] = (Array.isArray(payload.items) ? payload.items : [])
-          .filter((item: HomeworkRecord) => !item.archived)
+        const records = isSignedIn ? await getClassHomework() : [];
+        const activeItems: Assignment[] = records
+          .filter((item) => !item.archived)
           .sort((a: HomeworkRecord, b: HomeworkRecord) => {
             const aDue = `${a.dueDate}T${a.dueTime || '23:59'}`;
             const bDue = `${b.dueDate}T${b.dueTime || '23:59'}`;
@@ -56,15 +55,28 @@ export function HomeworkOverview() {
           setUsingDemoData(true);
         } else {
           setItems(activeItems);
+          setUsingDemoData(false);
         }
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'Could not load assignments.');
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    loadAssignments();
+    if (!isFirebaseConfigured()) {
+      void loadAssignments(false);
+      return;
+    }
+    const auth = getFirebaseAuth();
+    if (!auth) {
+      void loadAssignments(false);
+      return;
+    }
+    return onAuthStateChanged(auth, (user) => {
+      setLoading(true);
+      void loadAssignments(Boolean(user));
+    });
   }, []);
 
   return (

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import type { HomeworkRecord } from '@/lib/firestore-schema';
 import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase';
+import { getClassHomework } from '@/lib/homework-client';
 
 export function HomeworkList() {
   const [items, setItems] = useState<HomeworkRecord[]>([]);
@@ -18,10 +19,35 @@ export function HomeworkList() {
   const storageKey = `classmate:homework-categories:${uid}`;
 
   useEffect(() => {
-    if (!isFirebaseConfigured()) return;
+    if (!isFirebaseConfigured()) {
+      setError('Connect Firebase to load class assignments.');
+      setLoading(false);
+      return;
+    }
     const auth = getFirebaseAuth();
-    if (!auth) return;
-    return auth.onAuthStateChanged((user) => setUid(user?.uid || 'guest'));
+    if (!auth) {
+      setError('Firebase authentication is unavailable.');
+      setLoading(false);
+      return;
+    }
+    return auth.onAuthStateChanged(async (user) => {
+      setUid(user?.uid || 'guest');
+      if (!user) {
+        setItems([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        setItems(await getClassHomework());
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Could not load class assignments.');
+      } finally {
+        setLoading(false);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -80,27 +106,6 @@ export function HomeworkList() {
     persistCategories(categories, { ...assignmentCategories, [itemId]: category });
   };
 
-  useEffect(() => {
-    async function loadHomework() {
-      try {
-        const response = await fetch('/api/homework', { cache: 'no-store' });
-        const payload = await response.json();
-
-        if (!response.ok) {
-          throw new Error(payload.error || 'Failed to load homework list.');
-        }
-
-        setItems(Array.isArray(payload.items) ? payload.items : []);
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Unknown load error');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadHomework();
-  }, []);
-
   if (loading) {
     return <div className="rounded-[2rem] border border-slate-200 bg-white p-6 text-slate-500 shadow-soft">Loading homework...</div>;
   }
@@ -127,6 +132,12 @@ export function HomeworkList() {
         </form>
       </div>
       {categoryMessage ? <p role="status" className="text-sm text-slate-500">{categoryMessage}</p> : null}
+
+      {uid === 'guest' ? (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-800">
+          Sign in to see class assignments. Your personal categories stay saved in this browser.
+        </div>
+      ) : null}
 
       {items.length === 0 ? (
         <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500 shadow-soft">

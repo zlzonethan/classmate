@@ -83,12 +83,21 @@ service cloud.firestore {
         ]);
       allow update: if isSignedIn()
         && resource.data.createdBy == request.auth.uid
-        && resource.data.isPublic == false
         && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.isPublic == false;
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'description', 'date', 'time', 'type', 'isPublic', 'updatedAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.date is string
+        && request.resource.data.isPublic is bool
+        && request.resource.data.description is string
+        && request.resource.data.time is string
+        && request.resource.data.type in ['Homework', 'Test', 'Reminder', 'Event'];
       allow delete: if isSignedIn()
-        && resource.data.createdBy == request.auth.uid
-        && resource.data.isPublic == false;
+        && resource.data.createdBy == request.auth.uid;
     }
 
     match /tests/{testId} {

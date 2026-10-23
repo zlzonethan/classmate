@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 
@@ -45,6 +45,8 @@ export function CalendarClient() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [title, setTitle] = useState('');
@@ -141,9 +143,9 @@ export function CalendarClient() {
   }, [loadEvents]);
 
   const cells = useMemo(() => getMonthCells(month), [month]);
-  const upcomingEvents = events.filter((event) => event.date >= toDateKey(new Date())).slice(0, 8);
+  const upcomingEvents = events.filter((event) => event.date >= toDateKey(new Date()));
 
-  const handleCreateEvent = async (event: FormEvent) => {
+  const handleSaveEvent = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
     setMessage('');
@@ -166,31 +168,85 @@ export function CalendarClient() {
     setSaving(true);
     try {
       const now = new Date().toISOString();
-      await addDoc(collection(db, 'events'), {
+      const eventData = {
         title: title.trim().slice(0, 100),
         description: description.trim().slice(0, 500),
         date,
         time,
         type,
         isPublic,
-        createdBy: user.uid,
-        createdAt: now,
         updatedAt: now,
-        archived: false,
-      });
+      };
+      if (editingEventId) {
+        await updateDoc(doc(db, 'events', editingEventId), eventData);
+      } else {
+        await addDoc(collection(db, 'events'), {
+          ...eventData,
+          createdBy: user.uid,
+          createdAt: now,
+          archived: false,
+        });
+      }
       await loadEvents(user);
       setTitle('');
       setDescription('');
       setTime('');
       setType(eventTypes[3]);
       setIsPublic(false);
+      setEditingEventId(null);
       setShowForm(false);
-      setMessage(isPublic ? 'Public class event added.' : 'Private event added to your calendar.');
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Could not create this event. Check Firestore security rules.');
+      setMessage(editingEventId ? 'Event updated.' : isPublic ? 'Public class event added.' : 'Private event added to your calendar.');
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Could not save this event. Check Firestore security rules.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditEvent = (item: CalendarEvent) => {
+    setEditingEventId(item.id);
+    setTitle(item.title);
+    setDescription(item.description);
+    setDate(item.date);
+    setTime(item.time);
+    setType(item.type);
+    setIsPublic(item.isPublic);
+    setShowForm(true);
+    setError('');
+    setMessage('');
+  };
+
+  const handleDeleteEvent = async (item: CalendarEvent) => {
+    if (!user || !window.confirm(`Delete "${item.title}" from your calendar?`)) return;
+    const db = getFirebaseDb();
+    if (!db) {
+      setError('Firebase is not configured.');
+      return;
+    }
+
+    setDeletingEventId(item.id);
+    setError('');
+    setMessage('');
+    try {
+      await deleteDoc(doc(db, 'events', item.id));
+      setEvents((current) => current.filter((eventItem) => eventItem.id !== item.id));
+      setMessage('Event deleted.');
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this event. Check Firestore security rules.');
+    } finally {
+      setDeletingEventId(null);
+    }
+  };
+
+  const startNewEvent = () => {
+    setEditingEventId(null);
+    setTitle('');
+    setDescription('');
+    setDate(toDateKey(new Date()));
+    setTime('');
+    setType(eventTypes[3]);
+    setIsPublic(false);
+    setShowForm((current) => !current);
   };
 
   return (
@@ -201,10 +257,14 @@ export function CalendarClient() {
           <p className="text-lg font-semibold text-slate-900">{events.length} visible events</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Previous</button>
+          <button aria-label="Previous month" title="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50">
+            <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-5 w-5"><path d="m12 4-6 6 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
           <button onClick={() => setMonth(new Date())} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Today</button>
-          <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Next</button>
-          <button onClick={() => setShowForm((current) => !current)} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">+ Add event</button>
+          <button aria-label="Next month" title="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50">
+            <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-5 w-5"><path d="m8 4 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+          <button onClick={startNewEvent} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">+ Add event</button>
         </div>
       </div>
 
@@ -212,10 +272,10 @@ export function CalendarClient() {
       {error ? <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{error}</p> : null}
 
       {showForm ? (
-        <form onSubmit={handleCreateEvent} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-6">
+        <form onSubmit={handleSaveEvent} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-6">
           <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">New event</p>
-            <h2 className="mt-1 text-xl font-bold text-slate-900">Add to calendar</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">{editingEventId ? 'Edit event' : 'New event'}</p>
+            <h2 className="mt-1 text-xl font-bold text-slate-900">{editingEventId ? 'Update calendar event' : 'Add to calendar'}</h2>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium text-slate-700 sm:col-span-2">
@@ -262,8 +322,8 @@ export function CalendarClient() {
           </div>
           {!user ? <p className="mt-4 text-sm text-amber-800">Sign in with Google before saving an event.</p> : null}
           <div className="mt-5 flex justify-end gap-2">
-            <button type="button" onClick={() => setShowForm(false)} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Cancel</button>
-            <button type="submit" disabled={saving || !user} className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Saving…' : 'Save event'}</button>
+            <button type="button" onClick={() => { setShowForm(false); setEditingEventId(null); }} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Cancel</button>
+            <button type="submit" disabled={saving || !user} className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Saving…' : editingEventId ? 'Save changes' : 'Save event'}</button>
           </div>
         </form>
       ) : null}
@@ -315,6 +375,12 @@ export function CalendarClient() {
                   <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${item.isPublic ? 'bg-sky-100 text-sky-800' : 'bg-violet-100 text-violet-800'}`}>{item.isPublic ? 'Class' : 'Private'}</span>
                 </div>
                 {item.description ? <p className="mt-2 line-clamp-2 text-sm text-slate-600">{item.description}</p> : null}
+                {user?.uid === item.createdBy ? (
+                  <div className="mt-3 flex justify-end gap-2 border-t border-slate-200 pt-3">
+                    <button type="button" onClick={() => handleEditEvent(item)} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-sky-50">Edit</button>
+                    <button type="button" onClick={() => handleDeleteEvent(item)} disabled={deletingEventId === item.id} className="rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">{deletingEventId === item.id ? 'Deleting…' : 'Delete'}</button>
+                  </div>
+                ) : null}
               </article>
             ))}
             {!loading && upcomingEvents.length === 0 ? <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">No upcoming events yet.</p> : null}

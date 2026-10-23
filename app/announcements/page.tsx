@@ -13,6 +13,7 @@ type AnnouncementItem = {
   content: string;
   pinned: boolean;
   meta: string;
+  isSample?: boolean;
 };
 
 export default function AnnouncementsPage() {
@@ -48,6 +49,14 @@ export default function AnnouncementsPage() {
             </span>
           }
         />
+
+        <aside className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+          <p className="font-semibold">Who can post announcements?</p>
+          <p className="mt-1 leading-6">
+            Class presidents and teachers publish class-wide notices; students can read them.
+            {items.some((item) => item.isSample) ? ' These are sample posts. This page is read-only; an announcement editor has not been added yet.' : ' Posting is managed by class presidents and teachers; this page is read-only for students.'}
+          </p>
+        </aside>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-7">
           <div className="mb-5 flex items-center justify-between gap-3">
