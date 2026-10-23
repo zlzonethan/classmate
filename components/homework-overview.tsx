@@ -50,7 +50,7 @@ export function HomeworkOverview() {
             return aDue.localeCompare(bDue);
           });
 
-        if (activeItems.length === 0) {
+        if (!isSignedIn) {
           setItems(demoAssignments);
           setUsingDemoData(true);
         } else {

@@ -25,11 +25,6 @@ export default function HomeworkPage() {
               <h2 className="text-lg font-semibold text-slate-900">All assignments</h2>
               <p className="mt-1 text-sm text-slate-500">Browse assignments by subject and deadline.</p>
             </div>
-            <div className="flex flex-wrap gap-2" aria-label="Available subjects">
-              {['Mathematics', 'Science', 'English', 'History'].map((subject) => (
-                <span key={subject} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">{subject}</span>
-              ))}
-            </div>
           </div>
           <HomeworkList />
         </section>
