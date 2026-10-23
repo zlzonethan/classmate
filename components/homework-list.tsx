@@ -4,7 +4,7 @@ import Link from 'next/link';
 import NextImage from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, query, runTransaction, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, runTransaction, where, writeBatch } from 'firebase/firestore';
 import type { HomeworkRecord } from '@/lib/firestore-schema';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 import { getClassHomework } from '@/lib/homework-client';
@@ -24,6 +24,15 @@ type HomeworkSubmission = {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
   evidence: HomeworkEvidence[];
+};
+
+type HomeworkEditValues = {
+  title: string;
+  description: string;
+  subjectId: string;
+  dueDate: string;
+  dueTime: string;
+  priority: 'low' | 'medium' | 'high';
 };
 
 const subjectLabels: Record<string, string> = {
@@ -90,6 +99,8 @@ export function HomeworkList() {
   const [actionError, setActionError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File[]>>({});
+  const [editingHomeworkId, setEditingHomeworkId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<HomeworkEditValues | null>(null);
 
   useEffect(() => {
     if (!isFirebaseConfigured()) {
@@ -160,6 +171,125 @@ export function HomeworkList() {
   const pendingSubmissions = submissions.filter((submission) =>
     submission.status === 'PENDING' && submission.uid !== user?.uid,
   );
+
+  const startEditingHomework = (homework: HomeworkRecord) => {
+    if (!homework.id) return;
+    setEditingHomeworkId(homework.id);
+    setEditValues({
+      title: homework.title,
+      description: homework.description,
+      subjectId: homework.subjectId,
+      dueDate: homework.dueDate,
+      dueTime: homework.dueTime || '',
+      priority: homework.priority,
+    });
+    setActionError('');
+    setActionMessage('');
+  };
+
+  const saveHomeworkEdits = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!user || !editingHomeworkId || !editValues) return;
+    const db = getFirebaseDb();
+    if (!db) {
+      setActionError('Firebase is not configured.');
+      return;
+    }
+    const title = editValues.title.trim();
+    const description = editValues.description.trim();
+    const subjectId = editValues.subjectId.trim().slice(0, 40);
+    if (!title || !description || !subjectId || !editValues.dueDate) {
+      setActionError('Complete the title, description, subject, and due date.');
+      return;
+    }
+
+    setSubmittingId(editingHomeworkId);
+    setActionError('');
+    setActionMessage('');
+    try {
+      const homeworkRef = doc(db, 'homework', editingHomeworkId);
+      const calendarRef = doc(db, 'events', `homework_${editingHomeworkId}`);
+      const calendarSnapshot = await getDoc(calendarRef);
+      const subjectSnapshot = await getDocs(query(collection(db, 'subjects'), where('archived', '==', false)));
+      const now = new Date().toISOString();
+      const updatedHomework = {
+        title,
+        description,
+        subjectId,
+        dueDate: editValues.dueDate,
+        dueTime: editValues.dueTime,
+        priority: editValues.priority,
+        updatedAt: now,
+      };
+      const batch = writeBatch(db);
+      batch.update(homeworkRef, updatedHomework);
+      if (!subjectSnapshot.docs.some((subject) => subject.data().name?.toLowerCase() === subjectId.toLowerCase())) {
+        batch.set(doc(collection(db, 'subjects')), {
+          name: subjectId,
+          color: '#0ea5e9',
+          archived: false,
+          createdAt: now,
+          updatedAt: now,
+          createdBy: user.uid,
+        });
+      }
+      batch.set(calendarRef, {
+        title: `Homework: ${title}`.slice(0, 100),
+        description: `${subjectId} assignment due ${editValues.dueDate}. ${description}`.slice(0, 500),
+        date: editValues.dueDate,
+        time: editValues.dueTime,
+        type: 'Homework',
+        isPublic: true,
+        createdBy: calendarSnapshot.exists() ? calendarSnapshot.data().createdBy : user.uid,
+        homeworkId: editingHomeworkId,
+        createdAt: calendarSnapshot.exists() ? calendarSnapshot.data().createdAt : now,
+        updatedAt: now,
+        archived: false,
+      });
+      await batch.commit();
+      setItems((current) => current.map((item) => item.id === editingHomeworkId
+        ? { ...item, ...updatedHomework }
+        : item));
+      setEditingHomeworkId(null);
+      setEditValues(null);
+      setActionMessage('Homework and its public calendar due date were updated.');
+    } catch (saveError) {
+      setActionError(saveError instanceof Error ? saveError.message : 'Could not update homework and its calendar event.');
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
+  const deleteHomework = async (homework: HomeworkRecord) => {
+    if (!user || !canReview || !homework.id) return;
+    if (!window.confirm(`Delete "${homework.title}" and its public calendar event? This cannot be undone.`)) return;
+    const db = getFirebaseDb();
+    if (!db) {
+      setActionError('Firebase is not configured.');
+      return;
+    }
+    setSubmittingId(homework.id);
+    setActionError('');
+    setActionMessage('');
+    try {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'homework', homework.id));
+      const calendarRef = doc(db, 'events', `homework_${homework.id}`);
+      if ((await getDoc(calendarRef)).exists()) batch.delete(calendarRef);
+      await batch.commit();
+      setItems((current) => current.filter((item) => item.id !== homework.id));
+      setSubmissions((current) => current.filter((submission) => submission.homeworkId !== homework.id));
+      if (editingHomeworkId === homework.id) {
+        setEditingHomeworkId(null);
+        setEditValues(null);
+      }
+      setActionMessage('Homework and its public calendar event were deleted.');
+    } catch (deleteError) {
+      setActionError(deleteError instanceof Error ? deleteError.message : 'Could not delete homework and its calendar event.');
+    } finally {
+      setSubmittingId(null);
+    }
+  };
 
   const submitForApproval = async (homework: HomeworkRecord) => {
     if (!user || !homework.id) return;
@@ -315,6 +445,44 @@ export function HomeworkList() {
       {actionError ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{actionError}</p> : null}
       {actionMessage ? <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{actionMessage}</p> : null}
 
+      {editingHomeworkId && editValues ? (
+        <form onSubmit={saveHomeworkEdits} className="space-y-4 rounded-3xl border border-sky-200 bg-white p-5 shadow-soft md:p-7">
+          <h2 className="text-xl font-bold text-slate-900">Edit homework</h2>
+          <label className="block text-sm font-medium text-slate-700">
+            Title
+            <input value={editValues.title} onChange={(event) => setEditValues({ ...editValues, title: event.target.value })} maxLength={120} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+          </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Description
+            <textarea value={editValues.description} onChange={(event) => setEditValues({ ...editValues, description: event.target.value })} maxLength={5000} rows={4} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Subject
+              <input value={editValues.subjectId} onChange={(event) => setEditValues({ ...editValues, subjectId: event.target.value })} maxLength={40} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Priority
+              <select value={editValues.priority} onChange={(event) => setEditValues({ ...editValues, priority: event.target.value as HomeworkEditValues['priority'] })} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5">
+                <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Due date
+              <input type="date" value={editValues.dueDate} onChange={(event) => setEditValues({ ...editValues, dueDate: event.target.value })} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Due time
+              <input type="time" value={editValues.dueTime} onChange={(event) => setEditValues({ ...editValues, dueTime: event.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button type="submit" disabled={submittingId === editingHomeworkId} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{submittingId === editingHomeworkId ? 'Saving…' : 'Save changes'}</button>
+            <button type="button" onClick={() => { setEditingHomeworkId(null); setEditValues(null); }} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700">Cancel</button>
+          </div>
+        </form>
+      ) : null}
+
       {canReview ? (
         <section className="rounded-3xl border border-amber-200 bg-white p-5 shadow-soft md:p-7">
           <h2 className="text-xl font-bold text-slate-900">Homework approval queue</h2>
@@ -406,6 +574,12 @@ export function HomeworkList() {
               <div className="flex flex-wrap items-center gap-3">
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${item.priority === 'high' ? 'bg-rose-50 text-rose-700' : item.priority === 'medium' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{item.priority}</span>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{item.archived ? 'Archived' : 'Active'}</span>
+                {canReview && item.id ? (
+                  <>
+                    <button type="button" onClick={() => startEditingHomework(item)} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-sky-50">Edit</button>
+                    <button type="button" disabled={submittingId === item.id} onClick={() => void deleteHomework(item)} className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60">Delete</button>
+                  </>
+                ) : null}
                 {user && item.id ? (() => {
                   const submission = submissions.find((entry) => entry.uid === user.uid && entry.homeworkId === item.id);
                   if (submission?.status === 'APPROVED') return <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Approved</span>;

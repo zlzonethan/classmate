@@ -54,7 +54,39 @@ service cloud.firestore {
 
     match /homework/{homeworkId} {
       allow read: if isSignedIn();
-      allow create, update: if isTeacherOrClassPresident();
+      allow create: if isTeacherOrClassPresident()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 5000
+        && request.resource.data.subjectId is string
+        && request.resource.data.subjectId.size() > 0
+        && request.resource.data.subjectId.size() <= 40
+        && request.resource.data.dueDate is string
+        && request.resource.data.dueTime is string
+        && request.resource.data.priority in ['low', 'medium', 'high']
+        && request.resource.data.attachmentUrls is list
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.archived == false;
+      allow update: if isTeacherOrClassPresident()
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'description', 'subjectId', 'dueDate', 'dueTime',
+          'priority', 'updatedAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 5000
+        && request.resource.data.subjectId is string
+        && request.resource.data.subjectId.size() > 0
+        && request.resource.data.subjectId.size() <= 40
+        && request.resource.data.dueDate is string
+        && request.resource.data.dueTime is string
+        && request.resource.data.priority in ['low', 'medium', 'high'];
       allow delete: if isTeacherOrClassPresident();
     }
 
@@ -127,14 +159,27 @@ service cloud.firestore {
         && request.resource.data.type in ['Homework', 'Test', 'Reminder', 'Event']
         && request.resource.data.keys().hasOnly([
           'title', 'description', 'date', 'time', 'type', 'isPublic',
-          'createdBy', 'createdAt', 'updatedAt', 'archived'
-        ]);
-      allow update: if isSignedIn()
-        && resource.data.createdBy == request.auth.uid
+          'createdBy', 'createdAt', 'updatedAt', 'archived', 'homeworkId'
+        ])
+        && (!('homeworkId' in request.resource.data) ||
+          (
+            isTeacherOrClassPresident()
+            && request.resource.data.type == 'Homework'
+            && request.resource.data.isPublic == true
+            && existsAfter(/databases/$(database)/documents/homework/$(request.resource.data.homeworkId))
+          ));
+      allow update: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid ||
+        (
+          isTeacherOrClassPresident()
+          && resource.data.homeworkId is string
+          && request.resource.data.homeworkId == resource.data.homeworkId
+        )
+      )
         && request.resource.data.createdBy == resource.data.createdBy
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'title', 'description', 'date', 'time', 'type', 'isPublic', 'updatedAt'
+          'title', 'description', 'date', 'time', 'type', 'isPublic', 'updatedAt', 'homeworkId'
         ])
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
@@ -143,9 +188,17 @@ service cloud.firestore {
         && request.resource.data.isPublic is bool
         && request.resource.data.description is string
         && request.resource.data.time is string
-        && request.resource.data.type in ['Homework', 'Test', 'Reminder', 'Event'];
-      allow delete: if isSignedIn()
-        && resource.data.createdBy == request.auth.uid;
+        && request.resource.data.type in ['Homework', 'Test', 'Reminder', 'Event']
+        && (!('homeworkId' in request.resource.data) ||
+          (
+            isTeacherOrClassPresident()
+            && request.resource.data.type == 'Homework'
+            && request.resource.data.isPublic == true
+          ));
+      allow delete: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid ||
+        (isTeacherOrClassPresident() && resource.data.homeworkId is string)
+      );
     }
 
     match /tests/{testId} {

@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 
 type Subject = {
@@ -126,7 +126,8 @@ export function HomeworkForm() {
         });
         setSubjects((current) => [...current, { id: subjectRef.id, name: subjectName }]);
       }
-      await addDoc(collection(db, 'homework'), {
+      const homeworkRef = doc(collection(db, 'homework'));
+      const homeworkData = {
         ...form,
         subjectId: savedSubjectName,
         title: form.title.trim(),
@@ -136,7 +137,23 @@ export function HomeworkForm() {
         createdAt: now,
         updatedAt: now,
         archived: false,
+      };
+      const batch = writeBatch(db);
+      batch.set(homeworkRef, homeworkData);
+      batch.set(doc(db, 'events', `homework_${homeworkRef.id}`), {
+        title: `Homework: ${homeworkData.title}`.slice(0, 100),
+        description: `${savedSubjectName} assignment due ${form.dueDate}. ${form.description.trim()}`.slice(0, 500),
+        date: form.dueDate,
+        time: form.dueTime,
+        type: 'Homework',
+        isPublic: true,
+        createdBy: user.uid,
+        homeworkId: homeworkRef.id,
+        createdAt: now,
+        updatedAt: now,
+        archived: false,
       });
+      await batch.commit();
       setStatus({ type: 'success', message: `Assignment published: ${form.title.trim()}` });
       setForm({ ...initialValues, subjectId: savedSubjectName });
     } catch (saveError) {
