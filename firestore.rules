@@ -154,9 +154,114 @@ service cloud.firestore {
       allow delete: if isTeacherOrClassPresident();
     }
 
+    match /homeworkSubmissions/{submissionId} {
+      allow read: if isSignedIn() && (
+        resource.data.uid == request.auth.uid ||
+        isTeacherOrClassPresident()
+      );
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.homeworkId is string
+        && exists(/databases/$(database)/documents/homework/$(request.resource.data.homeworkId))
+        && request.resource.data.homeworkTitle is string
+        && request.resource.data.studentName is string
+        && request.resource.data.status == 'PENDING'
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string
+        && request.resource.data.evidenceIds is list
+        && request.resource.data.evidenceIds.size() > 0
+        && request.resource.data.evidenceIds.size() <= 5
+        && request.resource.data.keys().hasOnly([
+          'uid', 'studentName', 'homeworkId', 'homeworkTitle', 'status',
+          'createdAt', 'updatedAt', 'evidenceIds'
+        ]);
+      allow update: if isSignedIn() && (
+        (
+          isTeacherOrClassPresident()
+          && resource.data.status == 'PENDING'
+          && resource.data.uid != request.auth.uid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.homeworkId == resource.data.homeworkId
+          && request.resource.data.homeworkTitle == resource.data.homeworkTitle
+          && request.resource.data.studentName == resource.data.studentName
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.status in ['APPROVED', 'REJECTED']
+          && request.resource.data.reviewedBy == request.auth.uid
+          && request.resource.data.reviewedAt is string
+          && (
+            request.resource.data.status == 'REJECTED' ||
+            (
+              existsAfter(/databases/$(database)/documents/xpTransactions/$(submissionId))
+              && getAfter(/databases/$(database)/documents/xpTransactions/$(submissionId)).data.uid == resource.data.uid
+              && getAfter(/databases/$(database)/documents/xpTransactions/$(submissionId)).data.homeworkId == resource.data.homeworkId
+              && getAfter(/databases/$(database)/documents/xpTransactions/$(submissionId)).data.amount == 10
+            )
+          )
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'reviewedBy', 'reviewedAt'
+          ])
+        ) ||
+        (
+          resource.data.uid == request.auth.uid
+          && resource.data.status == 'REJECTED'
+          && request.resource.data.status == 'PENDING'
+          && request.resource.data.evidenceIds is list
+          && request.resource.data.evidenceIds.size() > resource.data.evidenceIds.size()
+          && request.resource.data.evidenceIds.size() <= 5
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.homeworkId == resource.data.homeworkId
+          && request.resource.data.homeworkTitle == resource.data.homeworkTitle
+          && request.resource.data.studentName == resource.data.studentName
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt is string
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'updatedAt', 'evidenceIds'
+          ])
+        )
+      );
+      allow delete: if false;
+
+      match /evidence/{evidenceId} {
+        allow read: if isSignedIn() && (
+          resource.data.uid == request.auth.uid ||
+          isTeacherOrClassPresident()
+        );
+        allow create: if isSignedIn()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 120
+          && request.resource.data.dataUrl is string
+          && request.resource.data.dataUrl.size() <= 650000
+          && request.resource.data.createdAt is string
+          && existsAfter(/databases/$(database)/documents/homeworkSubmissions/$(submissionId))
+          && getAfter(/databases/$(database)/documents/homeworkSubmissions/$(submissionId)).data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/homeworkSubmissions/$(submissionId)).data.status == 'PENDING'
+          && evidenceId in getAfter(/databases/$(database)/documents/homeworkSubmissions/$(submissionId)).data.evidenceIds
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'dataUrl', 'createdAt']);
+        allow update, delete: if false;
+      }
+    }
+
     match /xpTransactions/{transactionId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if isSignedIn() && (
+        resource.data.uid == request.auth.uid ||
+        isTeacherOrClassPresident()
+      );
+      allow create: if isTeacherOrClassPresident()
+        && request.resource.data.submissionId == transactionId
+        && request.resource.data.uid is string
+        && request.resource.data.homeworkId is string
+        && request.resource.data.amount == 10
+        && request.resource.data.reason == 'Approved homework completion'
+        && request.resource.data.createdAt is string
+        && existsAfter(/databases/$(database)/documents/homeworkSubmissions/$(transactionId))
+        && getAfter(/databases/$(database)/documents/homeworkSubmissions/$(transactionId)).data.status == 'APPROVED'
+        && getAfter(/databases/$(database)/documents/homeworkSubmissions/$(transactionId)).data.uid == request.resource.data.uid
+        && getAfter(/databases/$(database)/documents/homeworkSubmissions/$(transactionId)).data.homeworkId == request.resource.data.homeworkId
+        && request.resource.data.keys().hasOnly([
+          'uid', 'homeworkId', 'submissionId', 'amount', 'reason', 'createdAt'
+        ]);
       allow update, delete: if false;
     }
 

@@ -18,7 +18,7 @@ export default function LeaderboardPage() {
           </div>
 
           <p className="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Preview leaderboard with sample data. Real class rankings will be shown when XP records are connected.
+            This leaderboard currently uses example students and XP values. It does not show real class rankings yet.
           </p>
 
           <ol className="mt-5 space-y-3">
@@ -42,6 +42,15 @@ export default function LeaderboardPage() {
               </li>
             ))}
           </ol>
+          <section className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <h2 className="font-semibold text-slate-900">How the leaderboard is meant to work</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              XP is intended to reflect verified effort, such as completing assigned homework. Rankings would add each student&apos;s earned XP for the selected term, with completed assignments shown as extra progress context.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Right now, homework completion is not connected to XP awards or this ranking, so completing an assignment will not change these sample scores. The live version needs a verified completion flow that records XP safely and then loads those records for students in the same class.
+            </p>
+          </section>
         </section>
       </main>
     </DashboardShell>

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { addDoc, collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { PageHeader } from '@/components/page-header';
 import { getAppNavigation } from '@/lib/app-navigation';
@@ -17,6 +17,7 @@ type AnnouncementItem = {
   content: string;
   pinned: boolean;
   meta: string;
+  createdBy?: string;
   isSample?: boolean;
 };
 
@@ -42,6 +43,7 @@ export default function AnnouncementsPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [pinned, setPinned] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -78,6 +80,7 @@ export default function AnnouncementsPage() {
               content: data.content || '',
               pinned: Boolean(data.pinned),
               meta: `Posted by ${data.authorName || 'Class staff'} · ${data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'Recently'}`,
+              createdBy: data.createdBy,
               isSample: false,
               archived: Boolean(data.archived),
             };
@@ -96,7 +99,7 @@ export default function AnnouncementsPage() {
 
   const canPost = role === 'CLASS_PRESIDENT' || role === 'TEACHER';
 
-  const createAnnouncement = async (event: FormEvent) => {
+  const saveAnnouncement = async (event: FormEvent) => {
     event.preventDefault();
     if (!user || !canPost) {
       setError('Only class presidents and teachers can publish announcements.');
@@ -116,36 +119,98 @@ export default function AnnouncementsPage() {
     setError('');
     try {
       const now = new Date().toISOString();
-      const announcementRef = await addDoc(collection(db, 'announcements'), {
-        title: title.trim().slice(0, 120),
-        content: content.trim().slice(0, 5000),
-        pinned,
-        attachmentUrls: [],
-        createdBy: user.uid,
-        authorName: displayName,
-        createdAt: now,
-        updatedAt: now,
-        archived: false,
-        slug: `notice-${Date.now()}`,
-      });
-      const created: AnnouncementItem = {
-        id: announcementRef.id,
-        slug: announcementRef.id,
-        title: title.trim(),
-        content: content.trim(),
-        pinned,
-        meta: `Posted by ${displayName} · ${new Date(now).toLocaleDateString('en-US', { timeZone: 'UTC' })}`,
-      };
-      setItems((current) => [...current.filter((item) => !item.isSample), created].sort((a, b) => Number(b.pinned) - Number(a.pinned)));
+      const announcementTitle = title.trim().slice(0, 120);
+      const announcementContent = content.trim().slice(0, 5000);
+      if (editingId) {
+        await updateDoc(doc(db, 'announcements', editingId), {
+          title: announcementTitle,
+          content: announcementContent,
+          pinned,
+          updatedAt: now,
+        });
+        setItems((current) => current
+          .filter((item) => !item.isSample)
+          .map((item) => item.id === editingId
+            ? { ...item, title: announcementTitle, content: announcementContent, pinned }
+            : item)
+          .sort((a, b) => Number(b.pinned) - Number(a.pinned)));
+      } else {
+        const announcementRef = await addDoc(collection(db, 'announcements'), {
+          title: announcementTitle,
+          content: announcementContent,
+          pinned,
+          attachmentUrls: [],
+          createdBy: user.uid,
+          authorName: displayName,
+          createdAt: now,
+          updatedAt: now,
+          archived: false,
+          slug: `notice-${Date.now()}`,
+        });
+        const created: AnnouncementItem = {
+          id: announcementRef.id,
+          slug: announcementRef.id,
+          title: announcementTitle,
+          content: announcementContent,
+          pinned,
+          meta: `Posted by ${displayName} · ${new Date(now).toLocaleDateString('en-US', { timeZone: 'UTC' })}`,
+          createdBy: user.uid,
+        };
+        setItems((current) => [...current.filter((item) => !item.isSample), created].sort((a, b) => Number(b.pinned) - Number(a.pinned)));
+      }
       setTitle('');
       setContent('');
       setPinned(false);
+      setEditingId(null);
       setShowComposer(false);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not publish announcement. Check your class role and Firestore rules.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const editAnnouncement = (item: AnnouncementItem) => {
+    if (item.isSample) return;
+    setEditingId(item.id);
+    setTitle(item.title);
+    setContent(item.content);
+    setPinned(item.pinned);
+    setError('');
+    setShowComposer(true);
+  };
+
+  const removeAnnouncement = async (item: AnnouncementItem) => {
+    if (!canPost || item.isSample) return;
+    if (!window.confirm(`Delete "${item.title}"? This cannot be undone.`)) return;
+    const db = getFirebaseDb();
+    if (!db) {
+      setError('Firebase is not configured.');
+      return;
+    }
+    setError('');
+    try {
+      await deleteDoc(doc(db, 'announcements', item.id));
+      setItems((current) => current.filter((announcement) => announcement.id !== item.id));
+      if (editingId === item.id) {
+        setEditingId(null);
+        setShowComposer(false);
+        setTitle('');
+        setContent('');
+        setPinned(false);
+      }
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this announcement.');
+    }
+  };
+
+  const cancelEditing = () => {
+    setShowComposer(false);
+    setEditingId(null);
+    setTitle('');
+    setContent('');
+    setPinned(false);
+    setError('');
   };
 
   return (
@@ -168,24 +233,11 @@ export default function AnnouncementsPage() {
           }
         />
 
-        <aside className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
-          <p className="font-semibold">Who can post announcements?</p>
-          <p className="mt-1 leading-6">
-            Class presidents and teachers publish class-wide notices; students can read them.
-            {items.some((item) => item.isSample) ? ' These are sample posts until the class publishes its first announcement.' : ''}
-          </p>
-          {user && !canPost ? (
-            <p className="mt-2 leading-6">
-              Your account currently has the {role} role. A Firebase project admin must set your Firestore <code>users/{user.uid}</code> document&apos;s <code>role</code> field to <code>CLASS_PRESIDENT</code> before posting is enabled.
-            </p>
-          ) : null}
-        </aside>
-
         {showComposer && canPost ? (
-          <form onSubmit={createAnnouncement} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-7">
+          <form onSubmit={saveAnnouncement} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-7">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-600">For your class</p>
-              <h2 className="mt-1 text-xl font-bold text-slate-900">Write an announcement</h2>
+              <h2 className="mt-1 text-xl font-bold text-slate-900">{editingId ? 'Edit announcement' : 'Write an announcement'}</h2>
             </div>
             <label className="block text-sm font-medium text-slate-700">
               Title
@@ -200,7 +252,10 @@ export default function AnnouncementsPage() {
               Pin this announcement
             </label>
             {error ? <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-            <button type="submit" disabled={saving} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? 'Publishing…' : 'Publish to class'}</button>
+            <div className="flex flex-wrap gap-3">
+              <button type="submit" disabled={saving} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? 'Saving…' : editingId ? 'Save changes' : 'Publish to class'}</button>
+              {editingId ? <button type="button" onClick={cancelEditing} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700">Cancel edit</button> : null}
+            </div>
           </form>
         ) : null}
 
@@ -238,6 +293,12 @@ export default function AnnouncementsPage() {
                   </div>
                   <p className="text-sm leading-6 text-slate-600">{item.content}</p>
                   <div className="mt-4 flex justify-end border-t border-slate-200 pt-3">
+                    {canPost && !item.isSample ? (
+                      <div className="mr-auto flex gap-2">
+                        <button type="button" onClick={() => editAnnouncement(item)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50">Edit</button>
+                        <button type="button" onClick={() => void removeAnnouncement(item)} className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">Delete</button>
+                      </div>
+                    ) : null}
                     <Link href={`/announcements/${item.isSample ? item.slug : item.id}`} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50">Read details →</Link>
                   </div>
                 </article>
