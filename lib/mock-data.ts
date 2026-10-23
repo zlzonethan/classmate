@@ -24,6 +24,53 @@ export const upcomingItems = [
   { title: 'History quiz', subject: 'History', color: '#f97316', meta: 'Chapter 5 · Friday', time: 'Friday' },
 ];
 
+export const demoAssignments = [
+  {
+    id: 'demo-algebra',
+    title: 'Algebra worksheet',
+    subjectId: 'Mathematics',
+    dueDate: '2026-10-17',
+    dueTime: '20:00',
+    priority: 'high' as const,
+    description: 'Pages 42–43',
+  },
+  {
+    id: 'demo-lab-report',
+    title: 'Lab report draft',
+    subjectId: 'Science',
+    dueDate: '2026-10-17',
+    dueTime: '20:15',
+    priority: 'medium' as const,
+    description: 'Upload your evidence check',
+  },
+  {
+    id: 'demo-essay-outline',
+    title: 'Essay outline',
+    subjectId: 'English',
+    dueDate: '2026-10-17',
+    dueTime: '21:00',
+    priority: 'medium' as const,
+    description: 'Prepare a paragraph plan',
+  },
+  {
+    id: 'demo-history-quiz',
+    title: 'History quiz',
+    subjectId: 'History',
+    dueDate: '2026-10-20',
+    dueTime: '',
+    priority: 'low' as const,
+    description: 'Review Chapter 5',
+  },
+];
+
+export const demoLeaderboard = [
+  { uid: 'demo-1', displayName: 'Hana Kim', xp: 1280, completed: 18 },
+  { uid: 'demo-2', displayName: 'Jisoo Park', xp: 1140, completed: 16 },
+  { uid: 'demo-3', displayName: 'Minjun Lee', xp: 980, completed: 14 },
+  { uid: 'demo-4', displayName: 'You', xp: 860, completed: 12 },
+  { uid: 'demo-5', displayName: 'Yuna Choi', xp: 740, completed: 11 },
+];
+
 export const recentActivity = [
   { id: 1, title: 'History quiz added', description: 'Chapter 5 review unlocked', time: '2h ago' },
   { id: 2, title: 'AI verification approved', description: 'English homework photo reviewed', time: '5h ago' },

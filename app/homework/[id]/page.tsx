@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { DashboardShell } from '@/components/dashboard-shell';
+import { PageHeader } from '@/components/page-header';
+import { getAppNavigation } from '@/lib/app-navigation';
 
 const detail = {
   title: 'Algebra worksheet',
@@ -12,29 +15,28 @@ const detail = {
 
 export default function HomeworkDetailPage({ params }: { params: { id: string } }) {
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
-          <Link href="/homework" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-            ← Back to homework
-          </Link>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{detail.status}</span>
-        </div>
+    <DashboardShell navItems={getAppNavigation('homework')}>
+      <div className="mx-auto max-w-5xl space-y-6">
+        <PageHeader
+          eyebrow={detail.subject}
+          title={detail.title}
+          description={detail.description}
+          action={
+            <Link href="/homework" className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              ← Homework
+            </Link>
+          }
+        />
 
-        <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft md:p-8">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">{detail.subject}</p>
-              <h1 className="mt-2 text-3xl font-bold text-slate-900">{detail.title}</h1>
-            </div>
-            <div className="rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white">+{detail.xp} XP</div>
+        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-8">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">{detail.status}</span>
+            <span className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">+{detail.xp} XP</span>
           </div>
 
-          <p className="mb-6 text-slate-600">{detail.description}</p>
-
-          <div className="mb-6 grid gap-4 md:grid-cols-2">
+          <div className="mb-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">Due</p>
+              <p className="text-sm text-slate-500">Due date</p>
               <p className="mt-2 text-lg font-semibold text-slate-900">{detail.dueDate}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -43,20 +45,21 @@ export default function HomeworkDetailPage({ params }: { params: { id: string } 
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <h2 className="text-xl font-semibold text-slate-900">AI homework check</h2>
-            <p className="mt-3 text-slate-600">{detail.evidence}</p>
-            <div className="mt-5 flex items-center gap-3">
-              <button className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Upload evidence</button>
-              <button className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Request manual review</button>
+          <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">Submission</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-900">AI homework check</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">{detail.evidence}</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white">Upload evidence</button>
+              <button className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700">Request manual review</button>
             </div>
-          </div>
+          </section>
 
-          <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-600">
+          <p className="mt-5 rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-600">
             Evidence status: {params.id ? `Submission ${params.id.slice(0, 6)} is awaiting verification.` : 'Submission pending verification.'}
-          </div>
+          </p>
         </article>
       </div>
-    </main>
+    </DashboardShell>
   );
 }

@@ -1,31 +1,39 @@
 import Link from 'next/link';
+import { DashboardShell } from '@/components/dashboard-shell';
 import { HomeworkList } from '@/components/homework-list';
+import { PageHeader } from '@/components/page-header';
+import { getAppNavigation } from '@/lib/app-navigation';
 
 export default function HomeworkPage() {
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">Assignments</p>
-            <h1 className="mt-2 text-3xl font-bold text-slate-900">Homework</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Filter</button>
-            <Link href="/homework/new" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">+ New assignment</Link>
-          </div>
-        </div>
+    <DashboardShell navItems={getAppNavigation('homework')}>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Assignments"
+          title="Homework"
+          description="Keep track of what is due next."
+          action={
+            <Link href="/homework/new" className="inline-flex rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+              + New assignment
+            </Link>
+          }
+        />
 
-        <div className="mb-6 flex flex-wrap gap-3">
-          {['All subjects', 'Mathematics', 'Science', 'English', 'History'].map((filter) => (
-            <button key={filter} className={`rounded-full px-3 py-1.5 text-sm font-medium ${filter === 'All subjects' ? 'bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-600'}`}>
-              {filter}
-            </button>
-          ))}
-        </div>
-
-        <HomeworkList />
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-7">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">All assignments</h2>
+              <p className="mt-1 text-sm text-slate-500">Browse assignments by subject and deadline.</p>
+            </div>
+            <div className="flex flex-wrap gap-2" aria-label="Available subjects">
+              {['Mathematics', 'Science', 'English', 'History'].map((subject) => (
+                <span key={subject} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">{subject}</span>
+              ))}
+            </div>
+          </div>
+          <HomeworkList />
+        </section>
       </div>
-    </main>
+    </DashboardShell>
   );
 }

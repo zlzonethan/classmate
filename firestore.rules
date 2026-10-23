@@ -36,12 +36,19 @@ service cloud.firestore {
         && request.resource.data.uid == uid
         && request.resource.data.email is string
         && request.resource.data.classId is string
-        && request.resource.data.role == 'STUDENT';
+        && request.resource.data.role == 'STUDENT'
+        && request.resource.data.keys().hasOnly([
+          'uid', 'displayName', 'email', 'photoURL', 'bio', 'status',
+          'role', 'classId', 'createdAt', 'updatedAt'
+        ]);
       allow read: if isOwner(uid);
       allow update: if isOwner(uid)
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.role == resource.data.role
-        && request.resource.data.classId == resource.data.classId;
+        && request.resource.data.classId == resource.data.classId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'email', 'photoURL', 'bio', 'status', 'updatedAt'
+        ]);
       allow delete: if false;
     }
 
@@ -58,9 +65,30 @@ service cloud.firestore {
     }
 
     match /events/{eventId} {
-      allow read: if isSignedIn();
-      allow create, update: if isTeacherOrClassPresident();
-      allow delete: if isTeacherOrClassPresident();
+      allow read: if isSignedIn()
+        && (resource.data.isPublic == true || resource.data.createdBy == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.date is string
+        && request.resource.data.isPublic is bool
+        && request.resource.data.description is string
+        && request.resource.data.time is string
+        && request.resource.data.type in ['Homework', 'Test', 'Reminder', 'Event']
+        && request.resource.data.keys().hasOnly([
+          'title', 'description', 'date', 'time', 'type', 'isPublic',
+          'createdBy', 'createdAt', 'updatedAt', 'archived'
+        ]);
+      allow update: if isSignedIn()
+        && resource.data.createdBy == request.auth.uid
+        && resource.data.isPublic == false
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.isPublic == false;
+      allow delete: if isSignedIn()
+        && resource.data.createdBy == request.auth.uid
+        && resource.data.isPublic == false;
     }
 
     match /tests/{testId} {

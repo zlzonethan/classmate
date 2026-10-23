@@ -15,7 +15,7 @@ export function DashboardShell({
 }) {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
-      <div className="mx-auto flex max-w-7xl gap-6 p-4 md:p-6">
+      <div className="flex min-h-screen w-full gap-4 p-3 md:gap-5 md:p-4">
         <aside className="hidden w-72 shrink-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-soft lg:block">
           <div className="mb-8 flex items-center gap-3 px-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-600 text-sm font-bold text-white">C</div>

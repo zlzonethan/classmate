@@ -28,6 +28,9 @@ export interface UserProfile {
   uid: string;
   displayName: string;
   email: string;
+  photoURL?: string;
+  bio?: string;
+  status?: string;
   role: UserRole;
   classId: string;
   createdAt: string;
@@ -88,6 +91,8 @@ export interface EventRecord {
   description?: string;
   date: string;
   time?: string;
+  type?: string;
+  isPublic: boolean;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

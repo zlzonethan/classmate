@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { calendarEvents } from '@/lib/mock-data';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { getAuthorizedUser } from '@/lib/server-auth';
 
 const fallbackEvents = calendarEvents.map((event) => ({
   id: event.id,
@@ -12,13 +13,19 @@ const fallbackEvents = calendarEvents.map((event) => ({
   color: event.color,
   subject: event.subject,
   type: event.type,
+  isPublic: true,
   createdBy: 'system',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   archived: false,
 }));
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const user = await getAuthorizedUser(request);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized. Sign in to view calendar events.' }, { status: 401 });
+  }
+
   const db = getAdminDb();
 
   if (!db) {
@@ -52,11 +59,13 @@ export async function GET() {
         createdAt: data.createdAt || new Date().toISOString(),
         updatedAt: data.updatedAt || new Date().toISOString(),
         archived: !!data.archived,
+        isPublic: data.isPublic === true,
       };
-    });
+    }).filter((item) => item.isPublic || item.createdBy === user.uid);
 
     return NextResponse.json(items);
-  } catch {
-    return NextResponse.json(fallbackEvents, { status: 200 });
+  } catch (error) {
+    console.error('Failed to load calendar events:', error);
+    return NextResponse.json({ error: 'Failed to load calendar events.' }, { status: 500 });
   }
 }

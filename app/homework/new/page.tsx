@@ -1,22 +1,27 @@
 import Link from 'next/link';
+import { DashboardShell } from '@/components/dashboard-shell';
 import { HomeworkForm } from '@/components/homework-form';
+import { PageHeader } from '@/components/page-header';
+import { getAppNavigation } from '@/lib/app-navigation';
 
 export default function NewHomeworkPage() {
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">Assignments</p>
-            <h1 className="mt-2 text-3xl font-bold text-slate-900">Homework workspace</h1>
-          </div>
-          <Link href="/homework" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-            Back to list
-          </Link>
-        </div>
-
-        <HomeworkForm />
+    <DashboardShell navItems={getAppNavigation('homework')}>
+      <div className="mx-auto max-w-5xl space-y-6">
+        <PageHeader
+          eyebrow="Assignments"
+          title="Create homework"
+          description="Share a clear task and due date with your class."
+          action={
+            <Link href="/homework" className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              Back to homework
+            </Link>
+          }
+        />
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-8">
+          <HomeworkForm />
+        </section>
       </div>
-    </main>
+    </DashboardShell>
   );
 }

@@ -60,6 +60,7 @@ The project now includes a production-ready Firestore security configuration and
 
 - `firestore.rules` — base access rules for users, classes, homework, announcements, tests, events, XP transactions, and AI usage
 - `firestore.indexes.json` — default composite indexes for common class-app queries
+- `firebase.json` — Firebase CLI configuration for deploying Firestore rules and indexes
 - `scripts/seed-firestore.js` — bootstraps initial demo data into a Firebase project once admin credentials are configured
 
 To initialize the Firestore demo data:
@@ -69,6 +70,16 @@ node scripts/seed-firestore.js
 ```
 
 This script expects the same server-side Firebase admin variables as the rest of the app. It exits safely if the credentials are not configured yet.
+
+Personal profile fields and calendar events use the Firebase client SDK. Profile pictures are set with an image URL, so Firebase Storage is not required. Deploy Firestore rules and indexes before using them:
+
+```bash
+firebase login
+firebase use --add
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+Personal homework categories are saved in browser storage per signed-in user on that device; they are not shared with classmates or synced across devices.
 
 ## AI verification policy
 

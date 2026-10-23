@@ -63,43 +63,49 @@ export function DashboardClient() {
   }
 
   return (
-    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft">
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">Dashboard</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">Welcome{user?.displayName ? `, ${user.displayName}` : ''}</h1>
+    <div className="rounded-3xl border border-slate-200 bg-white px-4 py-3 shadow-soft md:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {user?.photoURL ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.photoURL} alt="" className="h-10 w-10 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-700">
+              {(user?.displayName || user?.email || 'C').slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-sky-600">Dashboard</p>
+            <h1 className="truncate text-lg font-bold text-slate-900">Welcome{user?.displayName ? `, ${user.displayName}` : ''}</h1>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-600">
+        <div className="flex items-center gap-2">
+          <span className="hidden max-w-56 truncate rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-600 sm:inline-block">
             {user?.email || 'Not signed in'}
           </span>
-          <button onClick={handleSignOut} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-            Sign out
-          </button>
+          {user ? (
+            <Link href="/profile" className="rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              Profile
+            </Link>
+          ) : null}
+          {user ? (
+            <button onClick={handleSignOut} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+              Sign out
+            </button>
+          ) : (
+            <Link href="/auth" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+              Sign in
+            </Link>
+          )}
         </div>
       </div>
 
       {!user ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
-          Firebase is not configured yet. Add your frontend Firebase credentials to enable real authentication and class data.
-          <div className="mt-3">
-            <Link href="/auth" className="font-semibold underline">Go to auth</Link>
-          </div>
+        <div className={`mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3 text-sm ${isFirebaseConfigured() ? 'bg-sky-50 text-sky-800' : 'bg-amber-50 text-amber-800'}`}>
+          <span>{isFirebaseConfigured() ? 'Sign in to see your profile and personal progress.' : 'Firebase is not configured yet; showing class preview data.'}</span>
+          <Link href="/auth" className="shrink-0 font-semibold underline">{isFirebaseConfigured() ? 'Sign in with Google' : 'Sign in'}</Link>
         </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            { label: 'Homework completed', value: '18/24', tone: 'bg-sky-50 text-sky-700' },
-            { label: 'XP earned', value: '1,280', tone: 'bg-violet-50 text-violet-700' },
-            { label: 'Class goal', value: '72%', tone: 'bg-emerald-50 text-emerald-700' },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${stat.tone}`}>{stat.label}</div>
-              <div className="mt-4 text-3xl font-bold text-slate-900">{stat.value}</div>
-            </div>
-          ))}
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

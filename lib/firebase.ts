@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
@@ -13,7 +12,12 @@ export const firebaseConfig = {
 };
 
 export function isFirebaseConfigured() {
-  return Object.values(firebaseConfig).every(Boolean);
+  return Boolean(
+    firebaseConfig.apiKey &&
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.appId
+  );
 }
 
 export function getFirebaseApp(): FirebaseApp | null {
@@ -36,9 +40,4 @@ export function getFirebaseAuth(): Auth | null {
 export function getFirebaseDb(): Firestore | null {
   const app = getFirebaseApp();
   return app ? getFirestore(app) : null;
-}
-
-export function getFirebaseStorage(): FirebaseStorage | null {
-  const app = getFirebaseApp();
-  return app ? getStorage(app) : null;
 }
