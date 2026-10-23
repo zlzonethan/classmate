@@ -39,7 +39,6 @@ const initialValues: HomeworkFormValues = {
 export function HomeworkForm() {
   const [form, setForm] = useState(initialValues);
   const [subjects, setSubjects] = useState(defaultSubjects);
-  const [newSubject, setNewSubject] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState('STUDENT');
   const [loading, setLoading] = useState(true);
@@ -89,43 +88,6 @@ export function HomeworkForm() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const addSubject = async (event: FormEvent) => {
-    event.preventDefault();
-    const name = newSubject.trim().slice(0, 40);
-    if (!name || !user || !canManage) return;
-    if (subjects.some((subject) => subject.name.toLowerCase() === name.toLowerCase())) {
-      setStatus({ type: 'error', message: 'That subject already exists.' });
-      return;
-    }
-    const db = getFirebaseDb();
-    if (!db) {
-      setStatus({ type: 'error', message: 'Firebase is not configured.' });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setStatus(null);
-    try {
-      const now = new Date().toISOString();
-      const subjectRef = await addDoc(collection(db, 'subjects'), {
-        name,
-        color: '#0ea5e9',
-        archived: false,
-        createdAt: now,
-        updatedAt: now,
-        createdBy: user.uid,
-      });
-      setSubjects((current) => [...current, { id: subjectRef.id, name }]);
-      setForm((current) => ({ ...current, subjectId: name }));
-      setNewSubject('');
-      setStatus({ type: 'success', message: `${name} was added to the class subjects.` });
-    } catch (saveError) {
-      setStatus({ type: 'error', message: saveError instanceof Error ? saveError.message : 'Could not add this subject.' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setStatus(null);
@@ -142,12 +104,31 @@ export function HomeworkForm() {
       setStatus({ type: 'error', message: 'Firebase is not configured.' });
       return;
     }
+    const subjectName = form.subjectId.trim().slice(0, 40);
+    if (!subjectName) {
+      setStatus({ type: 'error', message: 'Enter a subject name.' });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const now = new Date().toISOString();
+      const existingSubject = subjects.find((subject) => subject.name.toLowerCase() === subjectName.toLowerCase());
+      const savedSubjectName = existingSubject?.name || subjectName;
+      if (!existingSubject) {
+        const subjectRef = await addDoc(collection(db, 'subjects'), {
+          name: subjectName,
+          color: '#0ea5e9',
+          archived: false,
+          createdAt: now,
+          updatedAt: now,
+          createdBy: user.uid,
+        });
+        setSubjects((current) => [...current, { id: subjectRef.id, name: subjectName }]);
+      }
       await addDoc(collection(db, 'homework'), {
         ...form,
+        subjectId: savedSubjectName,
         title: form.title.trim(),
         description: form.description.trim(),
         attachmentUrls: [],
@@ -157,7 +138,7 @@ export function HomeworkForm() {
         archived: false,
       });
       setStatus({ type: 'success', message: `Assignment published: ${form.title.trim()}` });
-      setForm({ ...initialValues, subjectId: subjects[0]?.name || '' });
+      setForm({ ...initialValues, subjectId: savedSubjectName });
     } catch (saveError) {
       setStatus({ type: 'error', message: saveError instanceof Error ? saveError.message : 'Could not create homework. Check your class role and Firestore rules.' });
     } finally {
@@ -187,9 +168,19 @@ export function HomeworkForm() {
 
         <div>
           <label className="mb-2 block text-sm font-medium text-slate-700">Subject</label>
-          <select value={form.subjectId} onChange={(event) => updateField('subjectId', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500" required>
-            {subjects.map((subject) => <option key={subject.id} value={subject.name}>{subject.name}</option>)}
-          </select>
+          <input
+            value={form.subjectId}
+            onChange={(event) => updateField('subjectId', event.target.value)}
+            list="class-subject-options"
+            maxLength={40}
+            placeholder="Choose or type a subject, e.g. Korean"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500"
+            required
+          />
+          <datalist id="class-subject-options">
+            {subjects.map((subject) => <option key={subject.id} value={subject.name} />)}
+          </datalist>
+          <p className="mt-1.5 text-xs text-slate-500">Pick a suggestion or type any subject. New subjects are saved for the class when you publish.</p>
         </div>
         <div>
           <label className="mb-2 block text-sm font-medium text-slate-700">Priority</label>
@@ -206,18 +197,6 @@ export function HomeworkForm() {
           <input type="time" value={form.dueTime} onChange={(event) => updateField('dueTime', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500" />
         </div>
       </div>
-
-      {canManage ? (
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-800">Add a class subject</p>
-          <p className="mt-1 text-xs text-slate-500">Saved for the whole class and available in future assignments.</p>
-          <div className="mt-3 flex gap-2">
-            <label className="sr-only" htmlFor="new-class-subject">Subject name</label>
-            <input id="new-class-subject" value={newSubject} onChange={(event) => setNewSubject(event.target.value)} maxLength={40} placeholder="e.g. Korean" className="min-w-0 flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm outline-none focus:border-sky-500" />
-            <button type="button" onClick={addSubject} disabled={isSubmitting || !newSubject.trim()} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50">Add subject</button>
-          </div>
-        </div>
-      ) : null}
 
       {status ? <div role={status.type === 'error' ? 'alert' : 'status'} className={`mt-5 rounded-xl border px-3 py-2 text-sm ${status.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : status.type === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-sky-200 bg-sky-50 text-sky-700'}`}>{status.message}</div> : null}
 
