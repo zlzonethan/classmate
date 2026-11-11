@@ -1,58 +1,33 @@
-import Link from 'next/link';
 import { DashboardShell } from '@/components/dashboard-shell';
+import { PageHeader } from '@/components/page-header';
 import { getAppNavigation } from '@/lib/app-navigation';
 import { demoLeaderboard } from '@/lib/mock-data';
 
 export default function LeaderboardPage() {
   return (
     <DashboardShell navItems={getAppNavigation('leaderboard')}>
-      <main className="space-y-6">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft md:p-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.18em] text-sky-600">Room 2A</p>
-              <h1 className="mt-2 text-3xl font-bold text-slate-900">Class leaderboard</h1>
-              <p className="mt-2 text-slate-500">Celebrate progress and effort across your class.</p>
-            </div>
-            <Link href="/profile" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">My stats</Link>
-          </div>
+      <div className="space-y-5">
+        <PageHeader title="Leaderboard" description="10 XP for every homework that gets approved." />
 
-          <p className="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            This leaderboard currently uses example students and XP values. It does not show real class rankings yet.
-          </p>
+        <p className="note note-warn">
+          These are example names and scores. Real class rankings are not connected yet.
+        </p>
 
-          <ol className="mt-5 space-y-3">
+        <section className="panel">
+          <ol className="divide-y divide-slate-200">
             {demoLeaderboard.map((student, index) => (
-              <li key={student.uid} className={`flex items-center gap-4 rounded-2xl border p-4 ${
-                student.displayName === 'You' ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-slate-50'
-              }`}>
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                  index === 0 ? 'bg-amber-100 text-amber-800' : index === 1 ? 'bg-slate-200 text-slate-700' : index === 2 ? 'bg-orange-100 text-orange-800' : 'bg-white text-slate-500'
-                }`}>
-                  {index + 1}
-                </span>
+              <li key={student.uid} className={`flex items-center gap-4 py-3 ${student.displayName === 'You' ? '-mx-2 rounded-md bg-accent-50 px-2' : ''}`}>
+                <span className="w-6 shrink-0 text-center font-semibold tabular-nums text-slate-500">{index + 1}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-slate-900">{student.displayName}</p>
-                  <p className="mt-1 text-sm text-slate-500">{student.completed} assignments completed</p>
+                  <p className="truncate font-medium text-slate-900">{student.displayName}</p>
+                  <p className="text-sm text-slate-500">{student.completed} homework done</p>
                 </div>
-                <p className="shrink-0 text-right">
-                  <span className="block text-lg font-bold text-slate-900">{student.xp.toLocaleString()} XP</span>
-                  <span className="text-xs text-slate-500">this term</span>
-                </p>
+                <p className="shrink-0 font-semibold tabular-nums text-slate-900">{student.xp.toLocaleString()} XP</p>
               </li>
             ))}
           </ol>
-          <section className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <h2 className="font-semibold text-slate-900">How the leaderboard is meant to work</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              XP is intended to reflect verified effort, such as completing assigned homework. Rankings would add each student&apos;s earned XP for the selected term, with completed assignments shown as extra progress context.
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Right now, homework completion is not connected to XP awards or this ranking, so completing an assignment will not change these sample scores. The live version needs a verified completion flow that records XP safely and then loads those records for students in the same class.
-            </p>
-          </section>
         </section>
-      </main>
+      </div>
     </DashboardShell>
   );
 }

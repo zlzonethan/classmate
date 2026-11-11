@@ -128,25 +128,23 @@ export function AuthForm() {
   };
 
   return (
-    <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 shadow-soft">
+    <div className="w-full max-w-md panel">
       <div className="mb-6">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-sky-600">Classmate</p>
-        <h1 className="mt-3 text-3xl font-bold text-slate-900">{mode === 'login' ? 'Welcome back' : 'Create account'}</h1>
-        <p className="mt-2 text-sm text-slate-500">{mode === 'login' ? 'Sign in to access class content.' : 'Start using the shared class platform.'}</p>
-      </div>
+        <h1 className="text-2xl font-semibold text-slate-900">{mode === 'login' ? 'Sign in to Room 2A' : 'Create your account'}</h1>
+              </div>
 
-      <div className="mb-5 flex rounded-full bg-slate-100 p-1">
+      <div className="mb-5 flex rounded-md bg-slate-100 p-1">
         <button
           type="button"
           onClick={() => setMode('login')}
-          className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition ${mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+          className={`flex-1 rounded px-3 py-2 text-sm font-medium ${mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
         >
-          Login
+          Sign in
         </button>
         <button
           type="button"
           onClick={() => setMode('signup')}
-          className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition ${mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+          className={`flex-1 rounded px-3 py-2 text-sm font-medium ${mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
         >
           Sign up
         </button>
@@ -155,35 +153,35 @@ export function AuthForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {mode === 'signup' ? (
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Full name</label>
+            <label className="label mb-1.5">Full name</label>
             <input
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500"
+              className="input"
               placeholder="Hana Kim"
             />
           </div>
         ) : null}
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
+          <label className="label mb-1.5">Email</label>
           <input
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500"
+            className="input"
             placeholder="student@school.edu"
             required
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Password</label>
+          <label className="label mb-1.5">Password</label>
           <input
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500"
+            className="input"
             placeholder="••••••••"
             required
             minLength={6}
@@ -193,7 +191,7 @@ export function AuthForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
+          className="w-full btn btn-primary"
         >
           {isSubmitting ? 'Processing...' : mode === 'login' ? 'Log in' : 'Create account'}
         </button>
@@ -209,7 +207,7 @@ export function AuthForm() {
         type="button"
         onClick={handleGoogleSignIn}
         disabled={isSubmitting}
-        className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+        className="flex w-full items-center justify-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.75 3.27-8.1Z" />
@@ -221,7 +219,7 @@ export function AuthForm() {
       </button>
 
       <div className="mt-6 flex items-center justify-between gap-4 text-sm text-slate-500">
-        <button type="button" onClick={handlePasswordReset} className="font-medium text-sky-700 hover:text-sky-800">
+        <button type="button" onClick={handlePasswordReset} className="font-medium text-accent-700 hover:text-accent-800">
           Forgot password?
         </button>
         <button type="button" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="font-medium text-slate-700 hover:text-slate-900">
@@ -229,8 +227,8 @@ export function AuthForm() {
         </button>
       </div>
 
-      {error ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-      {message ? <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p> : null}
+      {error ? <p className="mt-4 note note-error">{error}</p> : null}
+      {message ? <p className="mt-4 note note-ok">{message}</p> : null}
     </div>
   );
 }

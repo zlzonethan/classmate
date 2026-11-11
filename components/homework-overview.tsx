@@ -7,29 +7,11 @@ import { demoAssignments } from '@/lib/mock-data';
 import type { HomeworkRecord } from '@/lib/firestore-schema';
 import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase';
 import { getClassHomework } from '@/lib/homework-client';
+import { formatDue } from '@/lib/format';
 
 type Assignment = Pick<HomeworkRecord, 'title' | 'subjectId' | 'dueDate' | 'dueTime' | 'priority' | 'description'> & {
   id?: string;
 };
-
-function formatDueDate(dueDate: string, dueTime?: string) {
-  const date = new Date(`${dueDate}T${dueTime || '23:59'}:00`);
-  if (Number.isNaN(date.getTime())) return `Due ${dueDate}`;
-
-  const today = new Date();
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const startOfDueDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const daysUntilDue = Math.round((startOfDueDate.getTime() - startOfToday.getTime()) / 86400000);
-  const dueLabel = daysUntilDue < 0
-    ? 'Overdue'
-    : daysUntilDue === 0
-      ? 'Due today'
-      : daysUntilDue === 1
-        ? 'Due tomorrow'
-        : `Due ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
-
-  return dueTime ? `${dueLabel} · ${dueTime}` : dueLabel;
-}
 
 export function HomeworkOverview() {
   const [items, setItems] = useState<Assignment[]>([]);
@@ -80,58 +62,40 @@ export function HomeworkOverview() {
   }, []);
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-7">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-sky-600">Your work</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-900">Assignments</h2>
-          <p className="mt-1 text-sm text-slate-500">Closest deadlines first</p>
-        </div>
-        <Link href="/homework" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-          All assignments
-        </Link>
+    <section className="panel">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-lg font-semibold text-slate-900">Homework due next</h2>
+        <Link href="/homework" className="text-sm font-medium text-accent-600 hover:underline">See all</Link>
       </div>
 
-      {usingDemoData ? (
-        <p className="mb-4 rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-800">
-          Sample assignments are shown until real class assignments are added.
-        </p>
-      ) : null}
-
       {loading ? (
-        <p className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">Loading assignments…</p>
+        <p className="mt-3 text-slate-500">Loading…</p>
       ) : error ? (
-        <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{error}</p>
+        <p role="alert" className="note note-error mt-3">{error}</p>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-7 text-center">
-          <p className="font-semibold text-slate-800">You’re all caught up</p>
-          <p className="mt-1 text-sm text-slate-500">New assignments will show up here.</p>
-        </div>
+        <p className="mt-3 text-slate-600">Nothing due. You’re all caught up.</p>
       ) : (
-        <div className="space-y-3">
-          {items.slice(0, 6).map((item) => (
-            <Link
-              key={item.id || item.title}
-              href={item.id && !item.id.startsWith('demo-') ? `/homework/${item.id}` : '/homework'}
-              className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-sky-200 hover:bg-sky-50/50 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600">{item.subjectId}</span>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    item.priority === 'high' ? 'bg-rose-100 text-rose-700' : item.priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                  }`}>
-                    {item.priority} priority
+        <ul className="mt-1 divide-y divide-slate-200">
+          {items.slice(0, 5).map((item) => {
+            const due = formatDue(item.dueDate, item.dueTime);
+            return (
+              <li key={item.id || item.title}>
+                <Link
+                  href={item.id && !item.id.startsWith('demo-') ? `/homework/${item.id}` : '/homework'}
+                  className="-mx-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 rounded-md px-2 py-3 hover:bg-slate-50"
+                >
+                  <span className="min-w-0">
+                    <span className="font-medium text-slate-900">{item.title}</span>
+                    <span className="ml-2 text-sm text-slate-500">{item.subjectId}</span>
                   </span>
-                </div>
-                <h3 className="truncate text-lg font-semibold text-slate-900">{item.title}</h3>
-                {item.description ? <p className="mt-0.5 truncate text-sm text-slate-500">{item.description}</p> : null}
-              </div>
-              <span className="shrink-0 text-sm font-semibold text-slate-700">{formatDueDate(item.dueDate, item.dueTime)}</span>
-            </Link>
-          ))}
-        </div>
+                  <span className={`shrink-0 text-sm ${due.urgent ? 'font-medium text-red-700' : 'text-slate-600'}`}>{due.label}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       )}
+      {usingDemoData ? <p className="mt-2 text-xs text-slate-500">These are examples. Sign in to see your class’s homework.</p> : null}
     </section>
   );
 }

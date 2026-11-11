@@ -24,12 +24,18 @@ export const upcomingItems = [
   { title: 'History quiz', subject: 'History', color: '#f97316', meta: 'Chapter 5 · Friday', time: 'Friday' },
 ];
 
+function daysFromNow(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export const demoAssignments = [
   {
     id: 'demo-algebra',
     title: 'Algebra worksheet',
     subjectId: 'Mathematics',
-    dueDate: '2026-10-17',
+    dueDate: daysFromNow(1),
     dueTime: '20:00',
     priority: 'high' as const,
     description: 'Pages 42–43',
@@ -38,7 +44,7 @@ export const demoAssignments = [
     id: 'demo-lab-report',
     title: 'Lab report draft',
     subjectId: 'Science',
-    dueDate: '2026-10-17',
+    dueDate: daysFromNow(1),
     dueTime: '20:15',
     priority: 'medium' as const,
     description: 'Upload your evidence check',
@@ -47,7 +53,7 @@ export const demoAssignments = [
     id: 'demo-essay-outline',
     title: 'Essay outline',
     subjectId: 'English',
-    dueDate: '2026-10-17',
+    dueDate: daysFromNow(2),
     dueTime: '21:00',
     priority: 'medium' as const,
     description: 'Prepare a paragraph plan',
@@ -56,7 +62,7 @@ export const demoAssignments = [
     id: 'demo-history-quiz',
     title: 'History quiz',
     subjectId: 'History',
-    dueDate: '2026-10-20',
+    dueDate: daysFromNow(4),
     dueTime: '',
     priority: 'low' as const,
     description: 'Review Chapter 5',

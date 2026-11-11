@@ -124,22 +124,20 @@ export function ProfileOverview() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-7">
-        <div className="mb-5">
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-sky-600">Personal space</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">Profile</h1>
-          <p className="mt-1 text-sm text-slate-500">Let your classmates know who you are and what you’re up to.</p>
-        </div>
+      <header>
+        <h1 className="text-2xl font-semibold text-slate-900">Profile</h1>
+      </header>
+      <section className="panel">
 
         {!isFirebaseConfigured() ? (
-          <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Connect Firebase to create and save a personal profile.</p>
+          <p className="note note-warn">Connect Firebase to create and save a personal profile.</p>
         ) : !user && !loading ? (
-          <div className="rounded-xl bg-sky-50 p-4 text-sm text-sky-800">
+          <div className="note note-info">
             Sign in to edit your profile.
             <Link href="/auth" className="ml-2 font-semibold underline">Sign in</Link>
           </div>
         ) : loading ? (
-          <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Loading profile…</p>
+          <p className="note note-info">Loading profile…</p>
         ) : (
           <>
             <div className="flex flex-col gap-5 border-b border-slate-100 pb-6 sm:flex-row sm:items-center">
@@ -147,10 +145,10 @@ export function ProfileOverview() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photoURL} alt={`${displayName || 'Profile'} avatar`} onError={() => setPhotoLoadError(true)} className="h-20 w-20 rounded-full border border-slate-200 object-cover" />
               ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-600 text-2xl font-bold text-white">{initials}</div>
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent-600 text-2xl font-semibold text-white">{initials}</div>
               )}
               <div className="flex-1">
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="label">
                   Profile image URL
                   <input
                     type="url"
@@ -161,7 +159,7 @@ export function ProfileOverview() {
                     }}
                     maxLength={2048}
                     placeholder="https://example.com/photo.jpg"
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-sky-500"
+                    className="mt-2 input"
                     disabled={saving}
                   />
                 </label>
@@ -174,19 +172,19 @@ export function ProfileOverview() {
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="label">
                 Display name
-                <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={60} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-sky-500" />
+                <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={60} className="mt-2 input" />
               </label>
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="label">
                 Current status
-                <select value={status} onChange={(event) => setStatus(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-sky-500">
+                <select value={status} onChange={(event) => setStatus(event.target.value)} className="mt-2 input">
                   {statuses.map((value) => <option key={value}>{value}</option>)}
                 </select>
               </label>
-              <label className="block text-sm font-medium text-slate-700 md:col-span-2">
+              <label className="label md:col-span-2">
                 About me
-                <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={240} rows={3} placeholder="A little about you, your interests, or what you are working on…" className="mt-2 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 outline-none focus:border-sky-500" />
+                <textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={240} rows={3} placeholder="A little about you, your interests, or what you are working on…" className="mt-2 input" />
                 <span className="mt-1 block text-right text-xs text-slate-400">{bio.length}/240</span>
               </label>
             </div>
@@ -196,7 +194,7 @@ export function ProfileOverview() {
                 {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
                 {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
               </div>
-              <button onClick={handleSave} disabled={saving} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60">
+              <button onClick={handleSave} disabled={saving} className="btn btn-primary">
                 {saving ? 'Saving…' : 'Save profile'}
               </button>
             </div>
@@ -204,22 +202,19 @@ export function ProfileOverview() {
         )}
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-7">
+      <section className="panel">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-sky-600">Progress</p>
-            <h2 className="mt-1 text-xl font-bold text-slate-900">Stats</h2>
-          </div>
-          <Link href="/leaderboard" className="text-sm font-semibold text-sky-700 hover:text-sky-800">Class leaderboard →</Link>
+          <h2 className="text-lg font-semibold text-slate-900">Stats</h2>
+          <Link href="/leaderboard" className="text-sm font-semibold text-accent-700 hover:text-accent-800">Leaderboard</Link>
         </div>
-        <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <p className="mb-4 note note-warn">
           Preview stats until homework completion and XP records are connected.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           {quickStats.map((stat) => (
-            <article key={stat.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <article key={stat.label} className="rounded-lg border border-slate-200 p-4">
               <p className="text-sm text-slate-500">{stat.label}</p>
-              <p className="mt-2 text-2xl font-bold text-slate-900">{stat.value}</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">{stat.value}</p>
               <p className="mt-1 text-xs font-medium text-slate-500">{stat.change}</p>
             </article>
           ))}

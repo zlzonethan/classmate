@@ -70,25 +70,22 @@ export default function AnnouncementDetailPage({ params }: { params: { slug: str
 
   return (
     <DashboardShell navItems={getAppNavigation('announcements')}>
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="space-y-5">
         <PageHeader
-          eyebrow="Class announcement"
-          title={announcement?.title || 'Announcement'}
+                    title={announcement?.title || 'Announcement'}
           description={announcement ? `Posted by ${announcement.authorName}${announcement.createdAt ? ` · ${announcement.createdAt}` : ''}` : 'Read the latest update from your class.'}
           action={
-            <Link href="/announcements" className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <Link href="/announcements" className="btn">
               ← All announcements
             </Link>
           }
         />
-        {loading ? <p className="rounded-2xl bg-white p-5 text-slate-500">Loading announcement…</p> : null}
-        {error ? <p role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">{error}</p> : null}
+        {loading ? <p className="rounded-lg bg-white p-5 text-slate-500">Loading announcement…</p> : null}
+        {error ? <p role="alert" className="note note-warn">{error}</p> : null}
         {announcement && !loading ? (
-          <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-8">
-            {announcement.pinned ? <span className="inline-flex rounded-full bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800">Pinned</span> : null}
-            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5 md:p-7">
-              <p className="whitespace-pre-wrap text-base leading-8 text-slate-700">{announcement.content}</p>
-            </div>
+          <article className="panel">
+            {announcement.pinned ? <span className="inline-flex chip bg-amber-100 text-amber-800">Pinned</span> : null}
+            <p className={`whitespace-pre-wrap text-base leading-7 text-slate-800 ${announcement.pinned ? 'mt-3' : ''}`}>{announcement.content}</p>
           </article>
         ) : null}
       </div>

@@ -8,6 +8,7 @@ import { collection, doc, getDoc, getDocs, query, runTransaction, where, writeBa
 import type { HomeworkRecord } from '@/lib/firestore-schema';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 import { getClassHomework } from '@/lib/homework-client';
+import { formatDue } from '@/lib/format';
 
 type HomeworkEvidence = {
   id: string;
@@ -47,36 +48,6 @@ function getSubjectName(subjectId: string) {
   return subjectLabels[subjectId.toLowerCase()] || subjectId;
 }
 
-async function compressEvidenceImage(file: File): Promise<string> {
-  if (!file.type.startsWith('image/')) throw new Error('Only image files are supported.');
-  const imageUrl = URL.createObjectURL(file);
-  try {
-    const image = new Image();
-    image.src = imageUrl;
-    await image.decode();
-    const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Could not prepare this image for upload.');
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-    let quality = 0.82;
-    let dataUrl = canvas.toDataURL('image/jpeg', quality);
-    while (dataUrl.length * 0.75 > 450 * 1024 && quality > 0.35) {
-      quality -= 0.1;
-      dataUrl = canvas.toDataURL('image/jpeg', quality);
-    }
-    if (dataUrl.length * 0.75 > 450 * 1024) {
-      throw new Error(`${file.name} is too large after compression. Choose a smaller photo.`);
-    }
-    return dataUrl;
-  } finally {
-    URL.revokeObjectURL(imageUrl);
-  }
-}
-
 async function loadEvidence(db: NonNullable<ReturnType<typeof getFirebaseDb>>, submissionId: string): Promise<HomeworkEvidence[]> {
   const snapshot = await getDocs(collection(db, 'homeworkSubmissions', submissionId, 'evidence'));
   return snapshot.docs.map((item) => ({
@@ -98,7 +69,6 @@ export function HomeworkList() {
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<Record<string, File[]>>({});
   const [editingHomeworkId, setEditingHomeworkId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<HomeworkEditValues | null>(null);
 
@@ -291,81 +261,6 @@ export function HomeworkList() {
     }
   };
 
-  const submitForApproval = async (homework: HomeworkRecord) => {
-    if (!user || !homework.id) return;
-    const db = getFirebaseDb();
-    if (!db) {
-      setActionError('Firebase is not configured.');
-      return;
-    }
-    const files = selectedFiles[homework.id] || [];
-    if (files.length === 0) {
-      setActionError('Attach at least one photo as proof before submitting.');
-      return;
-    }
-    if (files.length > 5 || files.some((file) => !file.type.startsWith('image/'))) {
-      setActionError('Attach up to 5 image files.');
-      return;
-    }
-    setSubmittingId(homework.id);
-    setActionError('');
-    setActionMessage('');
-    try {
-      const submissionId = `${homework.id}__${user.uid}`;
-      const submissionRef = doc(db, 'homeworkSubmissions', submissionId);
-      const now = new Date().toISOString();
-      const existingSnapshot = await getDoc(submissionRef);
-      if (existingSnapshot.exists() && existingSnapshot.data().status !== 'REJECTED') {
-        throw new Error('This homework has already been submitted or approved.');
-      }
-      const existingEvidence = await loadEvidence(db, submissionId);
-      if (existingEvidence.length + files.length > 5) {
-        throw new Error('A submission can contain up to 5 photos in total.');
-      }
-      const evidenceFiles = await Promise.all(files.map(async (file) => ({
-        id: crypto.randomUUID(),
-        name: file.name.slice(0, 120),
-        dataUrl: await compressEvidenceImage(file),
-      })));
-      await runTransaction(db, async (transaction) => {
-        const existing = await transaction.get(submissionRef);
-        if (existing.exists() && existing.data().status !== 'REJECTED') {
-          throw new Error('This homework has already been submitted or approved.');
-        }
-        const submission = {
-          uid: user.uid,
-          studentName: user.displayName || user.email || user.uid,
-          homeworkId: homework.id,
-          homeworkTitle: homework.title,
-          status: 'PENDING' as const,
-          createdAt: existing.exists() ? existing.data().createdAt : now,
-          evidenceIds: [...(existing.exists() ? existing.data().evidenceIds || [] : []), ...evidenceFiles.map((file) => file.id)],
-        };
-        if (existing.exists()) {
-          transaction.update(submissionRef, { ...submission, updatedAt: now });
-        } else {
-          transaction.set(submissionRef, { ...submission, updatedAt: now });
-        }
-        for (const file of evidenceFiles) {
-          transaction.set(doc(db, 'homeworkSubmissions', submissionId, 'evidence', file.id), {
-            uid: user.uid,
-            name: file.name,
-            dataUrl: file.dataUrl,
-            createdAt: now,
-          });
-        }
-      });
-      setSelectedFiles((current) => ({ ...current, [homework.id!]: [] }));
-      setActionMessage('Submitted for class president or teacher approval.');
-      await refreshSubmissions(user, canReview);
-    } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : 'Could not submit this homework for approval.';
-      setActionError(message);
-    } finally {
-      setSubmittingId(null);
-    }
-  };
-
   const reviewSubmission = async (submission: HomeworkSubmission, decision: 'APPROVED' | 'REJECTED') => {
     if (!user || !canReview) return;
     const db = getFirebaseDb();
@@ -433,105 +328,81 @@ export function HomeworkList() {
   };
 
   if (loading) {
-    return <div className="rounded-[2rem] border border-slate-200 bg-white p-6 text-slate-500 shadow-soft">Loading homework…</div>;
+    return <p className="text-slate-500">Loading homework…</p>;
   }
 
   if (error) {
-    return <div role="alert" className="rounded-[2rem] border border-red-200 bg-red-50 p-6 text-red-700 shadow-soft">{error}</div>;
+    return <p role="alert" className="note note-error">{error}</p>;
   }
 
   return (
     <div className="space-y-4">
-      {actionError ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{actionError}</p> : null}
-      {actionMessage ? <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{actionMessage}</p> : null}
+      {actionError ? <p role="alert" className="note note-error">{actionError}</p> : null}
+      {actionMessage ? <p role="status" className="note note-ok">{actionMessage}</p> : null}
 
       {editingHomeworkId && editValues ? (
-        <form onSubmit={saveHomeworkEdits} className="space-y-4 rounded-3xl border border-sky-200 bg-white p-5 shadow-soft md:p-7">
-          <h2 className="text-xl font-bold text-slate-900">Edit homework</h2>
-          <label className="block text-sm font-medium text-slate-700">
+        <form onSubmit={saveHomeworkEdits} className="panel space-y-4 border-accent-300">
+          <h2 className="text-xl font-semibold text-slate-900">Edit homework</h2>
+          <label className="label">
             Title
-            <input value={editValues.title} onChange={(event) => setEditValues({ ...editValues, title: event.target.value })} maxLength={120} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+            <input value={editValues.title} onChange={(event) => setEditValues({ ...editValues, title: event.target.value })} maxLength={120} required className="mt-1.5 input" />
           </label>
-          <label className="block text-sm font-medium text-slate-700">
+          <label className="label">
             Description
-            <textarea value={editValues.description} onChange={(event) => setEditValues({ ...editValues, description: event.target.value })} maxLength={5000} rows={4} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+            <textarea value={editValues.description} onChange={(event) => setEditValues({ ...editValues, description: event.target.value })} maxLength={5000} rows={4} required className="mt-1.5 input" />
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="label">
               Subject
-              <input value={editValues.subjectId} onChange={(event) => setEditValues({ ...editValues, subjectId: event.target.value })} maxLength={40} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+              <input value={editValues.subjectId} onChange={(event) => setEditValues({ ...editValues, subjectId: event.target.value })} maxLength={40} required className="mt-1.5 input" />
             </label>
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="label">
               Priority
-              <select value={editValues.priority} onChange={(event) => setEditValues({ ...editValues, priority: event.target.value as HomeworkEditValues['priority'] })} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5">
+              <select value={editValues.priority} onChange={(event) => setEditValues({ ...editValues, priority: event.target.value as HomeworkEditValues['priority'] })} className="mt-1.5 input">
                 <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
               </select>
             </label>
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="label">
               Due date
-              <input type="date" value={editValues.dueDate} onChange={(event) => setEditValues({ ...editValues, dueDate: event.target.value })} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+              <input type="date" value={editValues.dueDate} onChange={(event) => setEditValues({ ...editValues, dueDate: event.target.value })} required className="mt-1.5 input" />
             </label>
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="label">
               Due time
-              <input type="time" value={editValues.dueTime} onChange={(event) => setEditValues({ ...editValues, dueTime: event.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5" />
+              <input type="time" value={editValues.dueTime} onChange={(event) => setEditValues({ ...editValues, dueTime: event.target.value })} className="mt-1.5 input" />
             </label>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button type="submit" disabled={submittingId === editingHomeworkId} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{submittingId === editingHomeworkId ? 'Saving…' : 'Save changes'}</button>
-            <button type="button" onClick={() => { setEditingHomeworkId(null); setEditValues(null); }} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700">Cancel</button>
+            <button type="submit" disabled={submittingId === editingHomeworkId} className="btn btn-primary">{submittingId === editingHomeworkId ? 'Saving…' : 'Save changes'}</button>
+            <button type="button" onClick={() => { setEditingHomeworkId(null); setEditValues(null); }} className="btn">Cancel</button>
           </div>
         </form>
       ) : null}
 
-      {canReview ? (
-        <section className="rounded-3xl border border-amber-200 bg-white p-5 shadow-soft md:p-7">
-          <h2 className="text-xl font-bold text-slate-900">Homework approval queue</h2>
-          <p className="mt-1 text-sm text-slate-500">Review completion requests from students.</p>
-          {pendingSubmissions.length === 0 ? (
-            <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">There are no homework submissions waiting for approval.</p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {pendingSubmissions.map((submission) => (
-                <div key={submission.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div>
-                    <p className="font-semibold text-slate-900">{submission.homeworkTitle}</p>
-                    <p className="mt-1 text-sm text-slate-500">{submission.studentName}</p>
-                    {submission.evidence.length ? (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {submission.evidence.map((file) => (
-                          <a key={file.id} href={file.dataUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-medium text-sky-700 underline">
-                            <NextImage src={file.dataUrl} alt="" width={48} height={48} unoptimized className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
-                            {file.name}
-                          </a>
-                        ))}
-                      </div>
-                    ) : <p className="mt-2 text-sm text-amber-700">No proof attached to this submission.</p>}
+      {canReview && pendingSubmissions.length > 0 ? (
+        <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <h2 className="font-semibold text-slate-900">Waiting for your review ({pendingSubmissions.length})</h2>
+          <ul className="mt-3 space-y-3">
+            {pendingSubmissions.map((submission) => (
+              <li key={submission.id} className="rounded-md border border-slate-200 bg-white p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900">{submission.studentName}</p>
+                    <p className="text-sm text-slate-600">{submission.homeworkTitle}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" disabled={submittingId === submission.id} onClick={() => void reviewSubmission(submission, 'APPROVED')} className="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Approve · +10 XP</button>
-                    <button type="button" disabled={submittingId === submission.id} onClick={() => void reviewSubmission(submission, 'REJECTED')} className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-60">Reject</button>
+                    <button type="button" disabled={submittingId === submission.id} onClick={() => void reviewSubmission(submission, 'APPROVED')} className="btn btn-primary">Approve (+10 XP)</button>
+                    <button type="button" disabled={submittingId === submission.id} onClick={() => void reviewSubmission(submission, 'REJECTED')} className="btn btn-danger">Reject</button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-      ) : null}
-
-      {user && submissions.some((submission) => submission.uid === user.uid) ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4">
-          <h2 className="font-semibold text-slate-900">My homework submissions</h2>
-          <ul className="mt-3 space-y-2">
-            {submissions.filter((submission) => submission.uid === user.uid).map((submission) => (
-              <li key={submission.id} className="flex flex-wrap justify-between gap-2 text-sm">
-                <span className="text-slate-700">{submission.homeworkTitle}</span>
-                <span className={`font-semibold ${submission.status === 'APPROVED' ? 'text-emerald-700' : submission.status === 'REJECTED' ? 'text-red-700' : 'text-amber-700'}`}>{submission.status}</span>
-                {submission.evidence.map((file) => (
-                  <a key={file.id} href={file.dataUrl} target="_blank" rel="noreferrer" className="flex w-full items-center gap-2 text-sky-700 underline">
-                    <NextImage src={file.dataUrl} alt="" width={48} height={48} unoptimized className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
-                    {file.name}
-                  </a>
-                ))}
+                {submission.evidence.length ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {submission.evidence.map((file) => (
+                      <a key={file.id} href={file.dataUrl} target="_blank" rel="noreferrer" title={`Open ${file.name}`}>
+                        <NextImage src={file.dataUrl} alt={file.name} width={96} height={96} unoptimized className="h-24 w-24 rounded-md border border-slate-200 object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                ) : <p className="mt-2 text-sm text-amber-800">No photo attached.</p>}
               </li>
             ))}
           </ul>
@@ -539,74 +410,69 @@ export function HomeworkList() {
       ) : null}
 
       {!signedIn ? (
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-800">
-          Sign in to see assignments shared with your class.
-        </div>
-      ) : null}
-
-      {items.length > 0 ? (
-        <div className="flex flex-wrap gap-2" aria-label="Filter assignments by subject">
-          {subjects.map((subject) => (
-            <button key={subject} type="button" onClick={() => setSelectedSubject(subject)} aria-pressed={selectedSubject === subject} className={`rounded-full px-4 py-2 text-sm font-medium transition ${selectedSubject === subject ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-              {subject}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {visibleItems.length === 0 ? (
-        <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500 shadow-soft">
-          {signedIn ? 'No class assignments yet.' : 'Sign in to view the class assignment list.'}
-        </div>
+        <p className="note note-info">
+          <Link href="/auth" className="font-medium underline">Sign in</Link> to see your class homework.
+        </p>
+      ) : items.length === 0 ? (
+        <p className="panel text-center text-slate-600">No homework has been posted yet.</p>
       ) : (
-        visibleItems.map((item) => {
-          const itemId = item.id || item.title;
-          return (
-            <article key={itemId} className="card flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-sky-500" />
-                  <span className="text-sm font-medium text-slate-600">{getSubjectName(item.subjectId)}</span>
-                </div>
-                <Link href={`/homework/${item.id ?? encodeURIComponent(item.title)}`} className="text-xl font-semibold text-slate-900 hover:text-sky-700">{item.title}</Link>
-                <p className="mt-1 text-sm text-slate-500">Due {item.dueDate}{item.dueTime ? ` at ${item.dueTime}` : ''}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${item.priority === 'high' ? 'bg-rose-50 text-rose-700' : item.priority === 'medium' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{item.priority}</span>
-                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{item.archived ? 'Archived' : 'Active'}</span>
-                {canReview && item.id ? (
-                  <>
-                    <button type="button" onClick={() => startEditingHomework(item)} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-sky-50">Edit</button>
-                    <button type="button" disabled={submittingId === item.id} onClick={() => void deleteHomework(item)} className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60">Delete</button>
-                  </>
-                ) : null}
-                {user && item.id ? (() => {
-                  const submission = submissions.find((entry) => entry.uid === user.uid && entry.homeworkId === item.id);
-                  if (submission?.status === 'APPROVED') return <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Approved</span>;
-                  if (submission?.status === 'PENDING') return <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Awaiting approval</span>;
-                  return (
-                    <div className="flex flex-col items-start gap-2">
-                      <label className="text-xs font-medium text-slate-600">
-                        Photo evidence (max 5 compressed images)
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={(event) => {
-                            setSelectedFiles((current) => ({ ...current, [item.id!]: Array.from(event.target.files || []) }));
-                          }}
-                          className="mt-1 block max-w-56 text-xs"
-                        />
-                      </label>
-                      {selectedFiles[item.id]?.length ? <p className="text-xs text-slate-500">{selectedFiles[item.id].length} file(s) selected</p> : null}
-                      <button type="button" disabled={submittingId === item.id} onClick={() => void submitForApproval(item)} className="rounded-full bg-sky-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{submittingId === item.id ? 'Uploading…' : submission?.status === 'REJECTED' ? 'Resubmit evidence' : 'Submit evidence for approval'}</button>
-                    </div>
-                  );
-                })() : null}
-              </div>
-            </article>
-          );
-        })
+        <section className="panel">
+          {subjects.length > 2 ? (
+            <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label="Filter by subject">
+              {subjects.map((subject) => (
+                <button
+                  key={subject}
+                  type="button"
+                  onClick={() => setSelectedSubject(subject)}
+                  aria-pressed={selectedSubject === subject}
+                  className={`rounded-md px-2.5 py-1.5 text-sm ${selectedSubject === subject ? 'bg-slate-800 font-medium text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                >
+                  {subject}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <ul className="divide-y divide-slate-200">
+            {visibleItems.map((item) => {
+              const due = formatDue(item.dueDate, item.dueTime);
+              const submission = user && item.id
+                ? submissions.find((entry) => entry.uid === user.uid && entry.homeworkId === item.id)
+                : undefined;
+              const href = `/homework/${item.id ?? encodeURIComponent(item.title)}`;
+              return (
+                <li key={item.id || item.title} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+                  <div className="min-w-0 flex-1 basis-56">
+                    <Link href={href} className="font-medium text-slate-900 hover:underline">{item.title}</Link>
+                    <p className="mt-0.5 text-sm text-slate-600">
+                      {getSubjectName(item.subjectId)}
+                      <span className="text-slate-400"> · </span>
+                      <span className={due.urgent ? 'font-medium text-red-700' : ''}>{due.label}</span>
+                      {item.priority === 'high' ? <span className="chip ml-2 bg-red-50 text-red-700">Important</span> : null}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {submission?.status === 'APPROVED' ? (
+                      <span className="chip bg-emerald-50 text-emerald-800">Done</span>
+                    ) : submission?.status === 'PENDING' ? (
+                      <span className="chip bg-amber-50 text-amber-800">Waiting for review</span>
+                    ) : (
+                      <Link href={href} className="btn btn-sm">
+                        {submission?.status === 'REJECTED' ? 'Rejected · resubmit' : 'Submit proof'}
+                      </Link>
+                    )}
+                    {canReview && item.id ? (
+                      <>
+                        <button type="button" onClick={() => startEditingHomework(item)} className="btn btn-sm">Edit</button>
+                        <button type="button" disabled={submittingId === item.id} onClick={() => void deleteHomework(item)} className="btn btn-danger btn-sm">Delete</button>
+                      </>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
     </div>
   );

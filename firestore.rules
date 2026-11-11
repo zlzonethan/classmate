@@ -144,6 +144,46 @@ service cloud.firestore {
       allow delete: if isTeacherOrClassPresident();
     }
 
+    // Suggestion box: any signed-in member can send one, but only the class
+    // president and teachers can read, resolve, or delete them. An anonymous
+    // suggestion must not carry the sender's uid or name.
+    match /suggestions/{suggestionId} {
+      allow read: if isTeacherOrClassPresident();
+      allow create: if isSignedIn()
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 2000
+        && request.resource.data.category in ['Classroom', 'Homework', 'Events', 'Other']
+        && request.resource.data.anonymous is bool
+        && request.resource.data.authorName is string
+        && request.resource.data.authorName.size() <= 80
+        && (
+          (
+            request.resource.data.anonymous == false
+            && request.resource.data.createdBy == request.auth.uid
+          ) ||
+          (
+            request.resource.data.anonymous == true
+            && request.resource.data.createdBy == null
+            && request.resource.data.authorName == ''
+          )
+        )
+        && request.resource.data.status == 'OPEN'
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string
+        && request.resource.data.keys().hasOnly([
+          'content', 'category', 'anonymous', 'createdBy', 'authorName',
+          'status', 'createdAt', 'updatedAt'
+        ]);
+      allow update: if isTeacherOrClassPresident()
+        && request.resource.data.status in ['OPEN', 'DONE']
+        && request.resource.data.updatedAt is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'updatedAt'
+        ]);
+      allow delete: if isTeacherOrClassPresident();
+    }
+
     match /events/{eventId} {
       allow read: if isSignedIn()
         && (resource.data.isPublic == true || resource.data.createdBy == request.auth.uid);

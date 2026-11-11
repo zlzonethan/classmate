@@ -58,7 +58,7 @@ New accounts receive the default `STUDENT` role. Assigning teacher or class-pres
 
 The project now includes a production-ready Firestore security configuration and a seed helper for the default class model:
 
-- `firestore.rules` — base access rules for users, classes, homework, announcements, tests, events, XP transactions, and AI usage
+- `firestore.rules` — base access rules for users, classes, homework, announcements, suggestions (readable only by the class president and teachers), tests, events, XP transactions, and AI usage
 - `firestore.indexes.json` — default composite indexes for common class-app queries
 - `firebase.json` — Firebase CLI configuration for deploying Firestore rules and indexes
 - `scripts/seed-firestore.js` — bootstraps initial demo data into a Firebase project once admin credentials are configured

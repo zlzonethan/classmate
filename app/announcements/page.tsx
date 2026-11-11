@@ -79,7 +79,7 @@ export default function AnnouncementsPage() {
               title: data.title || 'Untitled announcement',
               content: data.content || '',
               pinned: Boolean(data.pinned),
-              meta: `Posted by ${data.authorName || 'Class staff'} · ${data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'Recently'}`,
+              meta: `Posted by ${data.authorName || 'Class staff'} · ${data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recently'}`,
               createdBy: data.createdBy,
               isSample: false,
               archived: Boolean(data.archived),
@@ -153,7 +153,7 @@ export default function AnnouncementsPage() {
           title: announcementTitle,
           content: announcementContent,
           pinned,
-          meta: `Posted by ${displayName} · ${new Date(now).toLocaleDateString('en-US', { timeZone: 'UTC' })}`,
+          meta: `Posted by ${displayName} · ${new Date(now).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
           createdBy: user.uid,
         };
         setItems((current) => [...current.filter((item) => !item.isSample), created].sort((a, b) => Number(b.pinned) - Number(a.pinned)));
@@ -215,97 +215,72 @@ export default function AnnouncementsPage() {
 
   return (
     <DashboardShell navItems={getAppNavigation('announcements')}>
-      <div className="space-y-6">
+      <div className="space-y-5">
         <PageHeader
-          eyebrow="Class updates"
           title="Announcements"
-          description="Important notes and updates shared with your class."
+          description="News and reminders from your class president and teacher."
           action={
-            canPost ? (
-              <button onClick={() => setShowComposer((current) => !current)} className="rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">
-                {showComposer ? 'Cancel' : '+ Write announcement'}
-              </button>
-            ) : (
-              <span className="inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">
-                {items.filter((item) => item.pinned).length} pinned
-              </span>
-            )
+            canPost && !showComposer ? (
+              <button type="button" onClick={() => setShowComposer(true)} className="btn btn-primary">Write announcement</button>
+            ) : null
           }
         />
 
         {showComposer && canPost ? (
-          <form onSubmit={saveAnnouncement} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-7">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-600">For your class</p>
-              <h2 className="mt-1 text-xl font-bold text-slate-900">{editingId ? 'Edit announcement' : 'Write an announcement'}</h2>
-            </div>
-            <label className="block text-sm font-medium text-slate-700">
+          <form onSubmit={saveAnnouncement} className="panel space-y-4">
+            <h2 className="text-lg font-semibold text-slate-900">{editingId ? 'Edit announcement' : 'New announcement'}</h2>
+            <label className="label">
               Title
-              <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} required placeholder="e.g. Friday schedule change" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-sky-500" />
+              <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} required placeholder="e.g. Friday schedule change" className="input mt-1.5" />
             </label>
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="label">
               Message
-              <textarea value={content} onChange={(event) => setContent(event.target.value)} maxLength={5000} rows={5} required placeholder="Write the details for your classmates…" className="mt-1.5 w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-sky-500" />
+              <textarea value={content} onChange={(event) => setContent(event.target.value)} maxLength={5000} rows={6} required className="input mt-1.5" />
             </label>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <input type="checkbox" checked={pinned} onChange={(event) => setPinned(event.target.checked)} />
-              Pin this announcement
+            <label className="flex items-center gap-2.5 text-[15px] text-slate-800">
+              <input type="checkbox" checked={pinned} onChange={(event) => setPinned(event.target.checked)} className="h-4 w-4" />
+              Pin to the top
             </label>
-            {error ? <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-            <div className="flex flex-wrap gap-3">
-              <button type="submit" disabled={saving} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? 'Saving…' : editingId ? 'Save changes' : 'Publish to class'}</button>
-              {editingId ? <button type="button" onClick={cancelEditing} className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700">Cancel edit</button> : null}
+            {error ? <p role="alert" className="note note-error">{error}</p> : null}
+            <div className="flex flex-wrap gap-2">
+              <button type="submit" disabled={saving} className="btn btn-primary">{saving ? 'Saving…' : editingId ? 'Save changes' : 'Post to class'}</button>
+              <button type="button" onClick={cancelEditing} className="btn">Cancel</button>
             </div>
           </form>
         ) : null}
 
-        {!canPost && !user ? (
-          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-            Sign in to read live class announcements. The examples below are previews.
+        {!user && !loading ? (
+          <p className="note note-info">
+            These are examples. <Link href="/auth" className="font-medium underline">Sign in</Link> to read your class’s announcements.
           </p>
         ) : null}
 
-        {error && !showComposer ? <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
+        {error && !showComposer ? <p role="alert" className="note note-error">{error}</p> : null}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-7">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Latest posts</h2>
-              <p className="mt-1 text-sm text-slate-500">Class news, reminders, and pinned information.</p>
-            </div>
-            <span className="rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700">Room 2A</span>
+        {loading ? (
+          <p className="text-slate-500">Loading…</p>
+        ) : items.length === 0 ? (
+          <p className="panel text-center text-slate-600">No announcements yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {items.map((item) => (
+              <article key={item.id || item.slug} className="panel">
+                <h2 className="text-lg font-semibold text-slate-900">
+                  <Link href={`/announcements/${item.isSample ? item.slug : item.id}`} className="hover:underline">{item.title}</Link>
+                  {item.pinned ? <span className="chip ml-2 bg-amber-50 align-middle text-amber-800">Pinned</span> : null}
+                </h2>
+                <p className="mt-0.5 text-sm text-slate-500">{item.meta}</p>
+                <p className="mt-3 line-clamp-4 whitespace-pre-wrap text-[15px] leading-6 text-slate-700">{item.content}</p>
+                {canPost && !item.isSample ? (
+                  <div className="mt-4 flex gap-2">
+                    <button type="button" onClick={() => editAnnouncement(item)} className="btn btn-sm">Edit</button>
+                    <button type="button" onClick={() => void removeAnnouncement(item)} className="btn btn-danger btn-sm">Delete</button>
+                  </div>
+                ) : null}
+              </article>
+            ))}
           </div>
-
-          {loading ? (
-            <div className="rounded-2xl bg-slate-50 p-6 text-slate-600">Loading announcements…</div>
-          ) : items.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-500">No announcements yet.</div>
-          ) : (
-            <div className="space-y-3">
-              {items.map((item) => (
-                <article key={item.id || item.slug} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-sky-200">
-                  <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-900">{item.title}</h3>
-                      <p className="mt-1 text-sm text-slate-500">{item.meta}</p>
-                    </div>
-                    {item.pinned ? <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">Pinned</span> : null}
-                  </div>
-                  <p className="text-sm leading-6 text-slate-600">{item.content}</p>
-                  <div className="mt-4 flex justify-end border-t border-slate-200 pt-3">
-                    {canPost && !item.isSample ? (
-                      <div className="mr-auto flex gap-2">
-                        <button type="button" onClick={() => editAnnouncement(item)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50">Edit</button>
-                        <button type="button" onClick={() => void removeAnnouncement(item)} className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">Delete</button>
-                      </div>
-                    ) : null}
-                    <Link href={`/announcements/${item.isSample ? item.slug : item.id}`} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-sky-50">Read details →</Link>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+        )}
       </div>
     </DashboardShell>
   );

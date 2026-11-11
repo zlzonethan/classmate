@@ -2,31 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
 body {
-  background: linear-gradient(180deg, #f8fafc 0%, #eef3ff 100%);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #f7f7f5;
+  color: #1c1d1f;
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Noto Sans KR', 'Segoe UI', Roboto, sans-serif;
 }
 
-* {
-  box-sizing: border-box;
+@layer base {
+  :focus-visible {
+    outline: 2px solid theme('colors.accent.500');
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
-  .card {
-    @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-soft;
+  /* A plain white surface. Used once per section, never nested. */
+  .panel {
+    @apply rounded-lg border border-slate-200 bg-white p-4 md:p-5;
   }
 
-  .pill {
-    @apply inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700;
+  .btn {
+    @apply inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply border-accent-600 bg-accent-600 text-white hover:border-accent-700 hover:bg-accent-700;
+  }
+
+  .btn-danger {
+    @apply border-slate-300 text-red-700 hover:border-red-300 hover:bg-red-50;
+  }
+
+  .btn-sm {
+    @apply min-h-[32px] px-2.5 text-[13px];
+  }
+
+  .label {
+    @apply block text-sm font-medium text-slate-700;
+  }
+
+  .input {
+    @apply block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[15px] text-slate-900 placeholder:text-slate-400 focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-100;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium;
+  }
+
+  .note {
+    @apply rounded-md border px-3 py-2.5 text-sm;
+  }
+
+  .note-info {
+    @apply border-slate-200 bg-slate-50 text-slate-700;
+  }
+
+  .note-warn {
+    @apply border-amber-200 bg-amber-50 text-amber-900;
+  }
+
+  .note-error {
+    @apply border-red-200 bg-red-50 text-red-800;
+  }
+
+  .note-ok {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
   }
 }

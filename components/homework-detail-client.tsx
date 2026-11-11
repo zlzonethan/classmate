@@ -190,39 +190,39 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="space-y-5">
       <PageHeader
         eyebrow={homework?.subjectId || 'Class homework'}
         title={homework?.title || 'Homework details'}
         description={homework?.description || 'View the assignment and submit your completion evidence.'}
         action={
-          <Link href="/homework" className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <Link href="/homework" className="btn">
             ← Homework
           </Link>
         }
       />
 
-      {loading ? <p className="rounded-2xl bg-white p-5 text-slate-500">Loading homework…</p> : null}
-      {error ? <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">{error}</p> : null}
-      {message ? <p role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">{message}</p> : null}
+      {loading ? <p className="rounded-lg bg-white p-5 text-slate-500">Loading homework…</p> : null}
+      {error ? <p role="alert" className="note note-error">{error}</p> : null}
+      {message ? <p role="status" className="note note-ok">{message}</p> : null}
       {!loading && !user ? (
-        <p className="rounded-2xl border border-sky-200 bg-sky-50 p-5 text-sm text-sky-800">
+        <p className="note note-info">
           <Link href="/auth" className="font-semibold underline">Sign in</Link> to view your class homework and submit evidence.
         </p>
       ) : null}
 
       {homework && !loading ? (
-        <article className="space-y-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-soft md:p-8">
+        <article className="space-y-6 panel">
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-lg border border-slate-200 p-4">
               <p className="text-sm text-slate-500">Due date</p>
               <p className="mt-2 font-semibold text-slate-900">{homework.dueDate}{homework.dueTime ? ` at ${homework.dueTime}` : ''}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-lg border border-slate-200 p-4">
               <p className="text-sm text-slate-500">Subject</p>
               <p className="mt-2 font-semibold text-slate-900">{homework.subjectId}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-lg border border-slate-200 p-4">
               <p className="text-sm text-slate-500">Priority</p>
               <p className="mt-2 font-semibold capitalize text-slate-900">{homework.priority}</p>
             </div>
@@ -231,7 +231,7 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
           {homework.attachmentUrls?.length ? (
             <section>
               <h2 className="font-semibold text-slate-900">Assignment materials</h2>
-              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-sky-700">
+              <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-accent-700">
                 {homework.attachmentUrls.map((url) => (
                   <li key={url}><a href={url} target="_blank" rel="noreferrer" className="underline">{url}</a></li>
                 ))}
@@ -240,18 +240,17 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
           ) : null}
 
           {!user ? (
-            <p className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+            <p className="note note-info">
               <Link href="/auth" className="font-semibold underline">Sign in</Link> to submit your completed homework.
             </p>
           ) : (
-            <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <section className="rounded-lg border border-slate-200 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Completion submission</p>
-                  <h2 className="mt-1 text-xl font-semibold text-slate-900">Submit photo evidence</h2>
+                  <h2 className="text-xl font-semibold text-slate-900">Submit photo evidence</h2>
                 </div>
                 {submission ? (
-                  <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  <span className={`chip ${
                     submission.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
                     submission.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
                   }`}>{submission.status}</span>
@@ -260,8 +259,8 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
               {submission?.evidence.length ? (
                 <div className="mt-4 flex flex-wrap gap-3">
                   {submission.evidence.map((evidence) => (
-                    <a key={evidence.id} href={evidence.dataUrl} target="_blank" rel="noreferrer" className="w-32 text-sm text-sky-700 underline">
-                      <NextImage src={evidence.dataUrl} alt={evidence.name} width={128} height={128} unoptimized className="mb-1 h-32 w-32 rounded-xl border border-slate-200 object-cover" />
+                    <a key={evidence.id} href={evidence.dataUrl} target="_blank" rel="noreferrer" className="w-32 text-sm text-accent-700 underline">
+                      <NextImage src={evidence.dataUrl} alt={evidence.name} width={128} height={128} unoptimized className="mb-1 h-32 w-32 rounded-md border border-slate-200 object-cover" />
                       <span className="line-clamp-2">{evidence.name}</span>
                     </a>
                   ))}
@@ -274,7 +273,7 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
               ) : (
                 <div className="mt-4 space-y-3">
                   {submission?.status === 'REJECTED' ? <p className="text-sm text-red-700">Please add new evidence and resubmit for review.</p> : null}
-                  <label className="block text-sm font-medium text-slate-700">
+                  <label className="label">
                     Photos (up to 5 total, compressed before saving)
                     <input
                       type="file"
@@ -285,7 +284,7 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
                     />
                   </label>
                   {files.length ? <p className="text-sm text-slate-500">{files.length} photo(s) selected</p> : null}
-                  <button type="button" onClick={() => void submitEvidence()} disabled={saving} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+                  <button type="button" onClick={() => void submitEvidence()} disabled={saving} className="btn btn-primary">
                     {saving ? 'Submitting…' : submission?.status === 'REJECTED' ? 'Resubmit evidence' : 'Submit for approval'}
                   </button>
                 </div>
