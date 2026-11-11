@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { addDoc, collection, doc, getDoc, getDocs, query, where, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 
 type Subject = {
@@ -61,9 +61,15 @@ export function HomeworkForm() {
         if (currentUser) {
           const profile = await getDoc(doc(db, 'users', currentUser.uid));
           setRole(profile.data()?.role || 'STUDENT');
-          const snapshot = await getDocs(query(collection(db, 'subjects'), where('archived', '==', false)));
-          const savedSubjects = snapshot.docs.map((item) => ({ id: item.id, name: item.data().name as string }));
-          setSubjects([...defaultSubjects, ...savedSubjects.filter((item) => !defaultSubjects.some((fallback) => fallback.name.toLowerCase() === item.name?.toLowerCase()))]);
+          // The class's own list (Class settings → Subjects) replaces the
+          // starter list once it has any subjects, including hidden ones.
+          const snapshot = await getDocs(collection(db, 'subjects'));
+          const saved = snapshot.docs
+            .map((item) => ({ id: item.id, name: String(item.data().name || ''), archived: Boolean(item.data().archived) }))
+            .filter((item) => item.name);
+          setSubjects(saved.length
+            ? saved.filter((item) => !item.archived).sort((a, b) => a.name.localeCompare(b.name))
+            : defaultSubjects);
         } else {
           setRole('STUDENT');
           setSubjects(defaultSubjects);

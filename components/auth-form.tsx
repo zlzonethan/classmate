@@ -130,7 +130,7 @@ export function AuthForm() {
   return (
     <div className="w-full max-w-md panel">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">{mode === 'login' ? 'Sign in to Room 2A' : 'Create your account'}</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">{mode === 'login' ? 'Sign in' : 'Create your account'}</h1>
               </div>
 
       <div className="mb-5 flex rounded-md bg-slate-100 p-1">

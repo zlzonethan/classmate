@@ -3,6 +3,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { useClassSettings } from '@/lib/class-settings';
+import { useCurrentUser } from '@/lib/use-current-user';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 
 type CalendarEvent = {
@@ -55,6 +57,9 @@ export function CalendarClient() {
   const [time, setTime] = useState('');
   const [type, setType] = useState(eventTypes[3]);
   const [isPublic, setIsPublic] = useState(false);
+  const { isStaff } = useCurrentUser();
+  const { settings } = useClassSettings();
+  const canPostPublic = isStaff || settings.studentsCanPostEvents;
 
   const loadEvents = useCallback(async (currentUser: User | null) => {
     const db = getFirebaseDb();
@@ -163,6 +168,10 @@ export function CalendarClient() {
     }
     if (!title.trim() || !date) {
       setError('Add an event title and date.');
+      return;
+    }
+    if (isPublic && !canPostPublic) {
+      setError('Public events from students are turned off for your class. Choose “Private” to save this.');
       return;
     }
 
@@ -314,12 +323,14 @@ export function CalendarClient() {
                   </span>
                   <span className="mt-1 block pl-6 text-xs text-slate-500">Visible only in your calendar.</span>
                 </label>
-                <label className={`cursor-pointer rounded-lg border p-4 ${isPublic ? 'border-accent-300 bg-accent-50' : 'border-slate-200'}`}>
+                <label className={`rounded-lg border p-4 ${!canPostPublic ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${isPublic ? 'border-accent-300 bg-accent-50' : 'border-slate-200'}`}>
                   <span className="flex items-center gap-2 font-semibold text-slate-900">
-                    <input type="radio" name="event-privacy" checked={isPublic} onChange={() => setIsPublic(true)} />
+                    <input type="radio" name="event-privacy" checked={isPublic} disabled={!canPostPublic} onChange={() => setIsPublic(true)} />
                     Public — class members
                   </span>
-                  <span className="mt-1 block pl-6 text-xs text-slate-500">Visible to signed-in members who can access the class.</span>
+                  <span className="mt-1 block pl-6 text-xs text-slate-500">
+                    {canPostPublic ? 'Visible to everyone in the class.' : 'Your class president or teacher has turned this off.'}
+                  </span>
                 </label>
               </div>
             </fieldset>

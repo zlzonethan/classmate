@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { useClassSettings } from '@/lib/class-settings';
 import { getFirebaseDb } from '@/lib/firebase';
 import { formatDay } from '@/lib/format';
 import { useCurrentUser } from '@/lib/use-current-user';
@@ -23,6 +24,7 @@ type Suggestion = {
 
 function SuggestionForm() {
   const { user, displayName } = useCurrentUser();
+  const { settings } = useClassSettings();
   const [category, setCategory] = useState<string>(categories[0]);
   const [content, setContent] = useState('');
   const [anonymous, setAnonymous] = useState(false);
@@ -39,14 +41,15 @@ function SuggestionForm() {
     setSending(true);
     setError('');
     try {
+      const sendAnonymously = anonymous && settings.anonymousSuggestions;
       const now = new Date().toISOString();
       await addDoc(collection(db, 'suggestions'), {
         content: text.slice(0, MAX_LENGTH),
         category,
-        anonymous,
+        anonymous: sendAnonymously,
         // An anonymous suggestion stores nothing that identifies the sender.
-        createdBy: anonymous ? null : user.uid,
-        authorName: anonymous ? '' : displayName.slice(0, 80),
+        createdBy: sendAnonymously ? null : user.uid,
+        authorName: sendAnonymously ? '' : displayName.slice(0, 80),
         status: 'OPEN',
         createdAt: now,
         updatedAt: now,
@@ -93,15 +96,19 @@ function SuggestionForm() {
         <span className="mt-1 block text-right text-xs font-normal text-slate-500">{content.length}/{MAX_LENGTH}</span>
       </label>
 
-      <label className="flex items-start gap-2.5 text-[15px] text-slate-800">
-        <input type="checkbox" checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} className="mt-1 h-4 w-4" />
-        <span>
-          Send without my name
-          <span className="block text-sm text-slate-500">
-            {anonymous ? 'Your name and account will not be saved with this suggestion.' : `It will be sent as ${displayName}.`}
+      {settings.anonymousSuggestions ? (
+        <label className="flex items-start gap-2.5 text-[15px] text-slate-800">
+          <input type="checkbox" checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} className="mt-1 h-4 w-4" />
+          <span>
+            Send without my name
+            <span className="block text-sm text-slate-500">
+              {anonymous ? 'Your name and account will not be saved with this suggestion.' : `It will be sent as ${displayName}.`}
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+      ) : (
+        <p className="text-sm text-slate-600">Your class has anonymous suggestions turned off, so this will be sent as {displayName}.</p>
+      )}
 
       {error ? <p role="alert" className="note note-error">{error}</p> : null}
 
@@ -229,9 +236,10 @@ function SuggestionInbox() {
 
 export function SuggestionBox() {
   const { user, isStaff, loading, configured } = useCurrentUser();
+  const { settings, loading: settingsLoading } = useClassSettings();
   const [writing, setWriting] = useState(false);
 
-  if (loading) return <p className="text-slate-500">Loading…</p>;
+  if (loading || (user && settingsLoading)) return <p className="text-slate-500">Loading…</p>;
 
   if (!configured) {
     return <p className="note note-warn">The suggestion box needs Firebase to be connected.</p>;
@@ -245,12 +253,21 @@ export function SuggestionBox() {
     );
   }
 
-  if (!isStaff) return <SuggestionForm />;
+  if (!isStaff) {
+    return settings.suggestionsEnabled
+      ? <SuggestionForm />
+      : <p className="note note-info">The suggestion box is turned off for now.</p>;
+  }
 
   return (
     <div className="space-y-5">
+      {!settings.suggestionsEnabled ? (
+        <p className="note note-warn">
+          The suggestion box is off, so students can’t send new suggestions. Turn it on in <Link href="/settings#features" className="font-medium underline">Class settings</Link>.
+        </p>
+      ) : null}
       <SuggestionInbox />
-      {writing ? (
+      {!settings.suggestionsEnabled ? null : writing ? (
         <SuggestionForm />
       ) : (
         <button type="button" onClick={() => setWriting(true)} className="btn">Write a suggestion yourself</button>

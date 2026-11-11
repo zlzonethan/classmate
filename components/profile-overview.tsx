@@ -6,10 +6,14 @@ import { onAuthStateChanged, updateProfile, User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 import { quickStats } from '@/lib/mock-data';
+import { useClassSettings } from '@/lib/class-settings';
+import { roleLabel, useCurrentUser } from '@/lib/use-current-user';
 
 const statuses = ['Available', 'Studying', 'Busy', 'Away'];
 
 export function ProfileOverview() {
+  const { settings: classSettings } = useClassSettings();
+  const currentUser = useCurrentUser();
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
@@ -167,7 +171,7 @@ export function ProfileOverview() {
               </div>
               <div className="min-w-0 sm:text-right">
                 <p className="font-semibold text-slate-900">{user?.email}</p>
-                <p className="mt-1 text-sm text-slate-500">Room 2A · Student</p>
+                <p className="mt-1 text-sm text-slate-500">{classSettings.name} · {roleLabel(currentUser.role)}</p>
               </div>
             </div>
 

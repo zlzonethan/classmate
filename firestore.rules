@@ -26,9 +26,44 @@ service cloud.firestore {
       );
     }
 
+    function isTeacher() {
+      return isSignedIn() && userRole(request.auth.uid) == 'TEACHER';
+    }
+
+    // A switch from the class settings page. Missing switches fall back to
+    // `fallback`, so a class that never saved settings keeps working.
+    function classSetting(key, fallback) {
+      return exists(/databases/$(database)/documents/classes/default)
+        ? get(/databases/$(database)/documents/classes/default).data.get('settings', {}).get(key, fallback)
+        : fallback;
+    }
+
+    function validClassSettings(data) {
+      return (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() <= 40))
+        && (!('homeMessage' in data) || (data.homeMessage is string && data.homeMessage.size() <= 200))
+        && (!('settings' in data) || (
+          data.settings is map
+          && data.settings.get('suggestionsEnabled', true) is bool
+          && data.settings.get('anonymousSuggestions', true) is bool
+          && data.settings.get('studentsCanPostEvents', true) is bool
+        ))
+        && data.updatedAt is string
+        && data.updatedBy == request.auth.uid;
+    }
+
     match /classes/{classId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isTeacherOrClassPresident();
+      allow create: if isTeacherOrClassPresident()
+        && validClassSettings(request.resource.data)
+        && request.resource.data.keys().hasOnly([
+          'name', 'homeMessage', 'settings', 'updatedAt', 'updatedBy'
+        ]);
+      allow update: if isTeacherOrClassPresident()
+        && validClassSettings(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'homeMessage', 'settings', 'updatedAt', 'updatedBy'
+        ]);
+      allow delete: if false;
     }
 
     match /users/{uid} {
@@ -41,7 +76,16 @@ service cloud.firestore {
           'uid', 'displayName', 'email', 'photoURL', 'bio', 'status',
           'role', 'classId', 'createdAt', 'updatedAt'
         ]);
-      allow read: if isOwner(uid);
+      // Teachers see the member list on the class settings page.
+      allow read: if isOwner(uid) || isTeacher();
+      // Teachers can make a student class president and back. Nobody can
+      // grant the teacher role from the app, or change their own role.
+      allow update: if isTeacher()
+        && !isOwner(uid)
+        && resource.data.role in ['STUDENT', 'CLASS_PRESIDENT']
+        && request.resource.data.role in ['STUDENT', 'CLASS_PRESIDENT']
+        && request.resource.data.updatedAt is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'updatedAt']);
       allow update: if isOwner(uid)
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.role == resource.data.role
@@ -150,6 +194,8 @@ service cloud.firestore {
     match /suggestions/{suggestionId} {
       allow read: if isTeacherOrClassPresident();
       allow create: if isSignedIn()
+        && classSetting('suggestionsEnabled', true) == true
+        && (request.resource.data.anonymous == false || classSetting('anonymousSuggestions', true) == true)
         && request.resource.data.content is string
         && request.resource.data.content.size() > 0
         && request.resource.data.content.size() <= 2000
@@ -194,6 +240,9 @@ service cloud.firestore {
         && request.resource.data.title.size() <= 100
         && request.resource.data.date is string
         && request.resource.data.isPublic is bool
+        && (request.resource.data.isPublic == false
+          || isTeacherOrClassPresident()
+          || classSetting('studentsCanPostEvents', true) == true)
         && request.resource.data.description is string
         && request.resource.data.time is string
         && request.resource.data.type in ['Homework', 'Test', 'Reminder', 'Event']
@@ -226,6 +275,9 @@ service cloud.firestore {
         && request.resource.data.title.size() <= 100
         && request.resource.data.date is string
         && request.resource.data.isPublic is bool
+        && (request.resource.data.isPublic == false
+          || isTeacherOrClassPresident()
+          || classSetting('studentsCanPostEvents', true) == true)
         && request.resource.data.description is string
         && request.resource.data.time is string
         && request.resource.data.type in ['Homework', 'Test', 'Reminder', 'Event']

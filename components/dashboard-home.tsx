@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { announcementFeed } from '@/lib/mock-data';
+import { useClassSettings } from '@/lib/class-settings';
 import { getFirebaseDb } from '@/lib/firebase';
 import { formatDay } from '@/lib/format';
 import { useCurrentUser } from '@/lib/use-current-user';
 
 export function DashboardGreeting() {
   const { user, displayName, isStaff, loading } = useCurrentUser();
+  const { settings } = useClassSettings();
   const [today, setToday] = useState('');
 
   useEffect(() => {
@@ -17,15 +19,22 @@ export function DashboardGreeting() {
   }, []);
 
   return (
-    <header className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">
-          {loading ? 'Hello' : user ? `Hello, ${displayName.split(' ')[0]}` : 'Room 2A'}
-        </h1>
-        <p className="mt-1 min-h-[1.5rem] text-[15px] text-slate-600">{today}</p>
-      </div>
-      {isStaff ? <Link href="/homework/new" className="btn btn-primary">Add homework</Link> : null}
-    </header>
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="min-h-[1.25rem] text-sm text-slate-500">{today}</p>
+          <h1 className="mt-0.5 text-[26px] font-semibold leading-tight tracking-tight text-slate-900">
+            {loading ? '\u00a0' : user ? `Hello, ${displayName.split(' ')[0]}` : settings.name}
+          </h1>
+        </div>
+        {isStaff ? <Link href="/homework/new" className="btn btn-primary">Add homework</Link> : null}
+      </header>
+      {settings.homeMessage ? (
+        <p className="rounded-lg border border-accent-200 bg-accent-50 px-4 py-3 text-[15px] text-accent-800">
+          {settings.homeMessage}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

@@ -45,7 +45,16 @@ The app intentionally does not expose privileged keys in the browser and keeps G
 
 Google sign-in is supported through Firebase Authentication. In Firebase Console, enable the Google provider under **Authentication → Sign-in method** and add your local/deployed hostnames under **Authentication → Settings → Authorized domains**. The sign-in screen then uses the same Firebase client configuration as email/password authentication.
 
-New accounts receive the default `STUDENT` role. Assigning teacher or class-president roles must be done through a trusted administrative process; users cannot grant those roles to themselves.
+New accounts receive the default `STUDENT` role. The first teacher account must be set up by changing that user's `role` to `TEACHER` in the Firebase console. After that, a teacher can make students class president (and back) from **Class settings → Members**. Nobody can grant the teacher role or change their own role from the app.
+
+## Class settings
+
+`/settings` is visible to the class president and teachers. It controls:
+
+- the class name and a short message shown on Home (`classes/default`)
+- feature switches: suggestion box, anonymous suggestions, and whether students can post public calendar events. These are enforced in `firestore.rules`, not only hidden in the UI.
+- the subject list offered when adding homework (`subjects`)
+- who is class president (teachers only)
 
 ## Secure backend guidance
 

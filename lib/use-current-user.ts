@@ -1,23 +1,38 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 import type { UserRole } from '@/lib/user-profile';
 
-export type CurrentUser = {
+type UserState = {
   user: User | null;
   role: UserRole;
   displayName: string;
   photoURL: string;
+  loading: boolean;
+};
+
+export type CurrentUser = UserState & {
   /** Class president or teacher. */
   isStaff: boolean;
-  loading: boolean;
+  isTeacher: boolean;
   configured: boolean;
 };
 
+// One shared auth subscription and profile read for every component on the page.
+const initialState: UserState = { user: null, role: 'STUDENT', displayName: '', photoURL: '', loading: true };
+let state = initialState;
+let started = false;
+let authSequence = 0;
+const listeners = new Set<() => void>();
 const syncedUids = new Set<string>();
+
+function setState(patch: Partial<UserState>) {
+  state = { ...state, ...patch };
+  listeners.forEach((listener) => listener());
+}
 
 // Makes sure a profile document exists for the signed-in account.
 async function ensureProfile(user: User) {
@@ -25,13 +40,54 @@ async function ensureProfile(user: User) {
   syncedUids.add(user.uid);
   try {
     const token = await user.getIdToken();
-    await fetch('/api/users', {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } });
   } catch {
     syncedUids.delete(user.uid);
   }
+}
+
+function start() {
+  if (started) return;
+  started = true;
+  const auth = getFirebaseAuth();
+  const db = getFirebaseDb();
+  if (!auth || !db) {
+    setState({ loading: false });
+    return;
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    const sequence = ++authSequence;
+    if (!user) {
+      setState({ ...initialState, loading: false });
+      return;
+    }
+
+    const fallbackName = user.displayName || user.email?.split('@')[0] || 'Classmate';
+    setState({ user, displayName: fallbackName, photoURL: user.photoURL || '', loading: true });
+    try {
+      await ensureProfile(user);
+      const profile = (await getDoc(doc(db, 'users', user.uid))).data();
+      if (sequence !== authSequence) return;
+      const role = profile?.role === 'TEACHER' || profile?.role === 'CLASS_PRESIDENT' ? profile.role : 'STUDENT';
+      setState({
+        role,
+        displayName: profile?.displayName || fallbackName,
+        photoURL: profile?.photoURL || user.photoURL || '',
+        loading: false,
+      });
+    } catch {
+      if (sequence === authSequence) setState({ role: 'STUDENT', loading: false });
+    }
+  });
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  start();
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function roleLabel(role: UserRole) {
@@ -41,56 +97,11 @@ export function roleLabel(role: UserRole) {
 }
 
 export function useCurrentUser(): CurrentUser {
-  const configured = isFirebaseConfigured();
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<UserRole>('STUDENT');
-  const [displayName, setDisplayName] = useState('');
-  const [photoURL, setPhotoURL] = useState('');
-  const [loading, setLoading] = useState(configured);
-
-  useEffect(() => {
-    const auth = getFirebaseAuth();
-    const db = getFirebaseDb();
-    if (!auth || !db) {
-      setLoading(false);
-      return;
-    }
-
-    return onAuthStateChanged(auth, async (nextUser) => {
-      setUser(nextUser);
-      if (!nextUser) {
-        setRole('STUDENT');
-        setDisplayName('');
-        setPhotoURL('');
-        setLoading(false);
-        return;
-      }
-
-      const fallbackName = nextUser.displayName || nextUser.email?.split('@')[0] || 'Classmate';
-      setDisplayName(fallbackName);
-      setPhotoURL(nextUser.photoURL || '');
-      try {
-        await ensureProfile(nextUser);
-        const profile = (await getDoc(doc(db, 'users', nextUser.uid))).data();
-        const profileRole = profile?.role;
-        setRole(profileRole === 'TEACHER' || profileRole === 'CLASS_PRESIDENT' ? profileRole : 'STUDENT');
-        setDisplayName(profile?.displayName || fallbackName);
-        setPhotoURL(profile?.photoURL || nextUser.photoURL || '');
-      } catch {
-        setRole('STUDENT');
-      } finally {
-        setLoading(false);
-      }
-    });
-  }, []);
-
+  const current = useSyncExternalStore(subscribe, () => state, () => initialState);
   return {
-    user,
-    role,
-    displayName,
-    photoURL,
-    isStaff: role === 'TEACHER' || role === 'CLASS_PRESIDENT',
-    loading,
-    configured,
+    ...current,
+    isStaff: current.role === 'TEACHER' || current.role === 'CLASS_PRESIDENT',
+    isTeacher: current.role === 'TEACHER',
+    configured: isFirebaseConfigured(),
   };
 }
