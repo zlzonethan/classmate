@@ -45,6 +45,19 @@ const subjectLabels: Record<string, string> = {
   spanish: 'Spanish',
 };
 
+// Finds the public calendar event that mirrors a homework, if there is one.
+// This is a query rather than a direct read on purpose: the security rules
+// refuse a direct read of an event that doesn't exist, and homework posted
+// before the calendar sync has no event.
+async function findHomeworkEvent(db: NonNullable<ReturnType<typeof getFirebaseDb>>, homeworkId: string) {
+  const snapshot = await getDocs(query(
+    collection(db, 'events'),
+    where('homeworkId', '==', homeworkId),
+    where('isPublic', '==', true),
+  ));
+  return snapshot.docs[0] ?? null;
+}
+
 function getSubjectName(subjectId: string) {
   return subjectLabels[subjectId.toLowerCase()] || subjectId;
 }
@@ -180,7 +193,7 @@ export function HomeworkList() {
     try {
       const homeworkRef = doc(db, 'homework', editingHomeworkId);
       const calendarRef = doc(db, 'events', `homework_${editingHomeworkId}`);
-      const calendarSnapshot = await getDoc(calendarRef);
+      const calendarEvent = await findHomeworkEvent(db, editingHomeworkId);
       const subjectSnapshot = await getDocs(query(collection(db, 'subjects'), where('archived', '==', false)));
       const now = new Date().toISOString();
       const updatedHomework = {
@@ -211,9 +224,9 @@ export function HomeworkList() {
         time: editValues.dueTime,
         type: 'Homework',
         isPublic: true,
-        createdBy: calendarSnapshot.exists() ? calendarSnapshot.data().createdBy : user.uid,
+        createdBy: calendarEvent ? calendarEvent.data().createdBy : user.uid,
         homeworkId: editingHomeworkId,
-        createdAt: calendarSnapshot.exists() ? calendarSnapshot.data().createdAt : now,
+        createdAt: calendarEvent ? calendarEvent.data().createdAt : now,
         updatedAt: now,
         archived: false,
       });
@@ -245,8 +258,8 @@ export function HomeworkList() {
     try {
       const batch = writeBatch(db);
       batch.delete(doc(db, 'homework', homework.id));
-      const calendarRef = doc(db, 'events', `homework_${homework.id}`);
-      if ((await getDoc(calendarRef)).exists()) batch.delete(calendarRef);
+      const calendarEvent = await findHomeworkEvent(db, homework.id);
+      if (calendarEvent) batch.delete(calendarEvent.ref);
       await batch.commit();
       setItems((current) => current.filter((item) => item.id !== homework.id));
       setSubmissions((current) => current.filter((submission) => submission.homeworkId !== homework.id));
