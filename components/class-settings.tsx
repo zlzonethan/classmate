@@ -69,7 +69,7 @@ function ClassInfoSection({ uid, settings }: { uid: string; settings: ClassSetti
             placeholder="e.g. Field trip forms are due Friday."
             className="input mt-1.5"
           />
-          <span className="mt-1 block text-xs font-normal text-slate-500">
+          <span className="mt-1 block text-sm font-normal text-slate-500">
             One short line everyone sees when they open the site. Leave empty to hide it. {homeMessage.length}/{HOME_MESSAGE_MAX}
           </span>
         </label>
@@ -421,7 +421,7 @@ export function ClassSettingsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       <nav aria-label="Settings sections" className="flex flex-wrap gap-1 text-sm">
         {sections.map((section) => (
           <a key={section.id} href={`#${section.id}`} className="rounded-md px-2.5 py-1.5 text-slate-700 hover:bg-slate-200/60">

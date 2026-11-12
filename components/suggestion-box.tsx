@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { SignInPrompt } from '@/components/ui';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { useClassSettings } from '@/lib/class-settings';
@@ -66,7 +67,7 @@ function SuggestionForm() {
   if (sent) {
     return (
       <section className="panel">
-        <h2 className="font-semibold text-slate-900">Sent. Thank you.</h2>
+        <h2 className="title text-xl">Sent. Thank you.</h2>
         <p className="mt-1 text-[15px] text-slate-600">The class president and teacher will read it.</p>
         <button type="button" onClick={() => setSent(false)} className="btn mt-4">Write another</button>
       </section>
@@ -194,7 +195,7 @@ function SuggestionInbox() {
   return (
     <section className="panel">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-900">Inbox</h2>
+        <h2 className="title text-xl">Inbox</h2>
         <div className="flex gap-1" role="group" aria-label="Show">
           <button type="button" aria-pressed={!showDone} onClick={() => setShowDone(false)} className={`rounded-md px-2.5 py-1.5 text-sm ${!showDone ? 'bg-slate-800 font-medium text-white' : 'text-slate-700 hover:bg-slate-100'}`}>
             To read ({openCount})
@@ -247,9 +248,9 @@ export function SuggestionBox() {
 
   if (!user) {
     return (
-      <p className="note note-info">
-        <Link href="/auth" className="font-medium underline">Sign in</Link> to send a suggestion.
-      </p>
+      <SignInPrompt title="Sign in to send a suggestion">
+        Only the class president and teacher can read what you write.
+      </SignInPrompt>
     );
   }
 
@@ -260,7 +261,7 @@ export function SuggestionBox() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       {!settings.suggestionsEnabled ? (
         <p className="note note-warn">
           The suggestion box is off, so students can’t send new suggestions. Turn it on in <Link href="/settings#features" className="font-medium underline">Class settings</Link>.

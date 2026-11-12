@@ -215,7 +215,7 @@ export default function AnnouncementsPage() {
 
   return (
     <DashboardShell navItems={getAppNavigation('announcements')}>
-      <div className="space-y-5">
+      <div className="space-y-8">
         <PageHeader
           title="Announcements"
           description="News and reminders from your class president and teacher."
@@ -228,7 +228,7 @@ export default function AnnouncementsPage() {
 
         {showComposer && canPost ? (
           <form onSubmit={saveAnnouncement} className="panel space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">{editingId ? 'Edit announcement' : 'New announcement'}</h2>
+            <h2 className="title text-xl">{editingId ? 'Edit announcement' : 'New announcement'}</h2>
             <label className="label">
               Title
               <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} required placeholder="e.g. Friday schedule change" className="input mt-1.5" />
@@ -251,7 +251,7 @@ export default function AnnouncementsPage() {
 
         {!user && !loading ? (
           <p className="note note-info">
-            These are examples. <Link href="/auth" className="font-medium underline">Sign in</Link> to read your class’s announcements.
+            These are examples. <Link href="/auth" className="font-medium underline underline-offset-4">Sign in</Link> to read your class’s announcements.
           </p>
         ) : null}
 
@@ -260,17 +260,17 @@ export default function AnnouncementsPage() {
         {loading ? (
           <p className="text-slate-500">Loading…</p>
         ) : items.length === 0 ? (
-          <p className="panel text-center text-slate-600">No announcements yet.</p>
+          <p className="panel text-slate-600">No announcements yet.</p>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-slate-200 border-t-2 border-slate-900">
             {items.map((item) => (
-              <article key={item.id || item.slug} className="panel">
-                <h2 className="text-lg font-semibold text-slate-900">
-                  <Link href={`/announcements/${item.isSample ? item.slug : item.id}`} className="hover:underline">{item.title}</Link>
-                  {item.pinned ? <span className="chip ml-2 bg-amber-50 align-middle text-amber-800">Pinned</span> : null}
+              <article key={item.id || item.slug} className="py-5">
+                <h2 className="title text-xl">
+                  <Link href={`/announcements/${item.isSample ? item.slug : item.id}`} className="underline-offset-4 hover:underline">{item.title}</Link>
+                  {item.pinned ? <span className="chip ml-2 bg-slate-900 align-middle font-sans text-paper">Pinned</span> : null}
                 </h2>
-                <p className="mt-0.5 text-sm text-slate-500">{item.meta}</p>
-                <p className="mt-3 line-clamp-4 whitespace-pre-wrap text-[15px] leading-6 text-slate-700">{item.content}</p>
+                <p className="mt-1 text-sm text-slate-500">{item.meta}</p>
+                <p className="mt-2 line-clamp-4 max-w-prose whitespace-pre-wrap text-base leading-7 text-slate-700">{item.content}</p>
                 {canPost && !item.isSample ? (
                   <div className="mt-4 flex gap-2">
                     <button type="button" onClick={() => editAnnouncement(item)} className="btn btn-sm">Edit</button>

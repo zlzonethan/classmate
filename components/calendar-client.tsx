@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -266,15 +267,15 @@ export function CalendarClient() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-900">{month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
+        <h2 className="title text-2xl">{month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
         <div className="flex flex-wrap gap-2">
-          <button aria-label="Previous month" title="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} className="btn w-10 px-0">
+          <button aria-label="Previous month" title="Previous month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} className="btn w-11 px-0">
             <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-5 w-5"><path d="m12 4-6 6 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
           <button onClick={() => setMonth(new Date())} className="btn">Today</button>
-          <button aria-label="Next month" title="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} className="btn w-10 px-0">
+          <button aria-label="Next month" title="Next month" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} className="btn w-11 px-0">
             <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-5 w-5"><path d="m8 4 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
           <button onClick={startNewEvent} className="btn btn-primary">Add event</button>
@@ -283,12 +284,12 @@ export function CalendarClient() {
 
       {message ? <p role="status" className="note note-ok">{message}</p> : null}
       {error ? <p role="alert" className="note note-warn">{error}</p> : null}
-      {!user && !loading ? <p className="note note-info">Sign in to see class events and add your own.</p> : null}
+      {!user && !loading ? <p className="note note-info"><Link href="/auth" className="font-medium underline underline-offset-4">Sign in</Link> to see class events and add your own.</p> : null}
 
       {showForm ? (
         <form onSubmit={handleSaveEvent} className="panel">
           <div className="mb-4">
-            <h2 className="text-xl font-semibold text-slate-900">{editingEventId ? 'Update calendar event' : 'Add to calendar'}</h2>
+            <h2 className="title text-xl">{editingEventId ? 'Update calendar event' : 'Add to calendar'}</h2>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="label sm:col-span-2">
@@ -316,19 +317,19 @@ export function CalendarClient() {
             <fieldset className="sm:col-span-2">
               <legend className="label">Who can see this?</legend>
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                <label className={`cursor-pointer rounded-lg border p-4 ${!isPublic ? 'border-accent-300 bg-accent-50' : 'border-slate-200'}`}>
+                <label className={`cursor-pointer rounded-md border p-4 ${!isPublic ? 'border-accent-600 bg-accent-50' : 'border-slate-300 bg-white'}`}>
                   <span className="flex items-center gap-2 font-semibold text-slate-900">
                     <input type="radio" name="event-privacy" checked={!isPublic} onChange={() => setIsPublic(false)} />
                     Private — only me
                   </span>
-                  <span className="mt-1 block pl-6 text-xs text-slate-500">Visible only in your calendar.</span>
+                  <span className="mt-1 block pl-6 text-sm text-slate-600">Visible only in your calendar.</span>
                 </label>
-                <label className={`rounded-lg border p-4 ${!canPostPublic ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${isPublic ? 'border-accent-300 bg-accent-50' : 'border-slate-200'}`}>
+                <label className={`rounded-md border p-4 ${!canPostPublic ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${isPublic ? 'border-accent-600 bg-accent-50' : 'border-slate-300 bg-white'}`}>
                   <span className="flex items-center gap-2 font-semibold text-slate-900">
                     <input type="radio" name="event-privacy" checked={isPublic} disabled={!canPostPublic} onChange={() => setIsPublic(true)} />
                     Public — class members
                   </span>
-                  <span className="mt-1 block pl-6 text-xs text-slate-500">
+                  <span className="mt-1 block pl-6 text-sm text-slate-600">
                     {canPostPublic ? 'Visible to everyone in the class.' : 'Your class president or teacher has turned this off.'}
                   </span>
                 </label>
@@ -343,27 +344,32 @@ export function CalendarClient() {
         </form>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[1.65fr_0.85fr]">
-        <section className="panel">
-          <div className="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-500 sm:gap-2">
-            {weekDays.map((day) => <div key={day} className="py-2">{day}</div>)}
+      <div className="space-y-8">
+        <section className="border-t-2 border-slate-900">
+          <div className="grid grid-cols-7 border-b border-slate-300 text-xs font-medium text-slate-600">
+            {weekDays.map((day) => <div key={day} className="px-1.5 py-2 sm:px-2">{day}</div>)}
           </div>
           {loading ? (
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
-              {Array.from({ length: 35 }, (_, index) => <div key={index} className="h-20 animate-pulse rounded-md bg-slate-100 sm:h-24" />)}
+            <div className="grid grid-cols-7 border-l border-slate-200">
+              {Array.from({ length: 35 }, (_, index) => <div key={index} className="h-20 animate-pulse border-b border-r border-slate-200 bg-slate-50 sm:h-24" />)}
             </div>
           ) : (
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+            <div className="grid grid-cols-7 border-l border-slate-200">
               {cells.map(({ date: cellDate, inMonth }) => {
                 const key = toDateKey(cellDate);
                 const dayEvents = events.filter((item) => item.date === key);
                 const today = key === toDateKey(new Date());
                 return (
-                  <div key={key} className={`min-h-20 rounded-md border p-1.5 sm:min-h-24 sm:rounded-lg sm:p-2 ${inMonth ? 'border-slate-200' : 'border-transparent'} ${today ? 'border-accent-500 bg-accent-50' : ''}`}>
-                    <span className={`text-xs font-medium ${today ? 'text-accent-700' : inMonth ? 'text-slate-700' : 'text-slate-300'}`}>{cellDate.getDate()}</span>
-                    <div className="mt-1 space-y-1">
+                  <div key={key} className={`min-h-20 min-w-0 border-b border-r border-slate-200 p-1 sm:min-h-24 sm:p-1.5 ${inMonth ? '' : 'bg-slate-50'}`}>
+                    <span
+                      aria-current={today ? 'date' : undefined}
+                      className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[13px] tabular-nums ${today ? 'bg-accent-600 font-semibold text-white' : inMonth ? 'font-medium text-slate-900' : 'text-slate-400'}`}
+                    >
+                      {cellDate.getDate()}
+                    </span>
+                    <div className="mt-1 space-y-0.5">
                       {dayEvents.slice(0, 2).map((item) => (
-                        <div key={item.id} title={`${item.title}${item.isPublic ? ' · Public' : ' · Private'}`} className={`truncate rounded px-1 py-1 text-[11px] font-semibold sm:px-1.5 sm:text-xs ${item.isPublic ? 'bg-accent-100 text-accent-800' : 'bg-slate-200 text-slate-700'}`}>
+                        <div key={item.id} title={`${item.title}${item.isPublic ? ' · Public' : ' · Private'}`} className={`truncate border-l-2 px-1 py-0.5 text-[11px] font-medium sm:text-xs ${item.isPublic ? 'border-accent-600 bg-accent-50 text-accent-800' : 'border-slate-500 bg-slate-100 text-slate-700'}`}>
                           {item.title}
                         </div>
                       ))}
@@ -377,27 +383,30 @@ export function CalendarClient() {
         </section>
 
         <aside className="panel">
-          <h2 className="text-xl font-semibold text-slate-900">Upcoming</h2>
-          <div className="mt-4 space-y-3">
+          <h2 className="title text-xl">Upcoming</h2>
+          <div className="mt-2 divide-y divide-slate-200">
             {upcomingEvents.map((item) => (
-              <article key={item.id} className="rounded-lg border border-slate-200 p-4">
+              <article key={item.id} className="row">
+                <p className="text-[15px] tabular-nums">
+                  <span className="block font-medium text-slate-900">{new Date(`${item.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                  {item.time ? <span className="block text-slate-500">{item.time}</span> : null}
+                </p>
+                <div className="min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-slate-900">{item.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">{new Date(`${item.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{item.time ? ` · ${item.time}` : ''}</p>
-                  </div>
+                  <p className="min-w-0 font-medium text-slate-900">{item.title}</p>
                   <span className={`shrink-0 chip ${item.isPublic ? 'bg-accent-100 text-accent-800' : 'bg-slate-200 text-slate-700'}`}>{item.isPublic ? 'Class' : 'Private'}</span>
                 </div>
-                {item.description ? <p className="mt-2 line-clamp-2 text-sm text-slate-600">{item.description}</p> : null}
+                {item.description ? <p className="mt-0.5 line-clamp-2 text-[15px] text-slate-600">{item.description}</p> : null}
                 {user?.uid === item.createdBy ? (
-                  <div className="mt-3 flex justify-end gap-2 border-t border-slate-200 pt-3">
+                  <div className="mt-2 flex gap-2">
                     <button type="button" onClick={() => handleEditEvent(item)} className="btn btn-sm">Edit</button>
                     <button type="button" onClick={() => handleDeleteEvent(item)} disabled={deletingEventId === item.id} className="btn btn-danger btn-sm">{deletingEventId === item.id ? 'Deleting…' : 'Delete'}</button>
                   </div>
                 ) : null}
+                </div>
               </article>
             ))}
-            {!loading && upcomingEvents.length === 0 ? <p className="note note-info">No upcoming events yet.</p> : null}
+            {!loading && upcomingEvents.length === 0 ? <p className="py-3 text-slate-600">Nothing coming up yet.</p> : null}
           </div>
         </aside>
       </div>

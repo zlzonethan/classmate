@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { useClassSettings } from '@/lib/class-settings';
 import { FormEvent, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
@@ -128,23 +130,23 @@ export function AuthForm() {
   };
 
   return (
-    <div className="w-full max-w-md panel">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">{mode === 'login' ? 'Sign in' : 'Create your account'}</h1>
-              </div>
+    <div className="w-full max-w-sm">
+      <h1 className="title text-[32px] leading-tight">{mode === 'login' ? 'Sign in to your class' : 'Create your account'}</h1>
 
-      <div className="mb-5 flex rounded-md bg-slate-100 p-1">
+      <div className="mb-6 mt-6 flex border-b border-slate-300" role="group" aria-label="Sign in or sign up">
         <button
           type="button"
           onClick={() => setMode('login')}
-          className={`flex-1 rounded px-3 py-2 text-sm font-medium ${mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+          aria-pressed={mode === 'login'}
+          className={`-mb-px min-h-[44px] flex-1 border-b-2 text-left text-[15px] ${mode === 'login' ? 'border-slate-900 font-semibold text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
         >
           Sign in
         </button>
         <button
           type="button"
           onClick={() => setMode('signup')}
-          className={`flex-1 rounded px-3 py-2 text-sm font-medium ${mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+          aria-pressed={mode === 'signup'}
+          className={`-mb-px min-h-[44px] flex-1 border-b-2 text-left text-[15px] ${mode === 'signup' ? 'border-slate-900 font-semibold text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
         >
           Sign up
         </button>
@@ -193,21 +195,17 @@ export function AuthForm() {
           disabled={isSubmitting}
           className="w-full btn btn-primary"
         >
-          {isSubmitting ? 'Processing...' : mode === 'login' ? 'Log in' : 'Create account'}
+          {isSubmitting ? 'One moment…' : mode === 'login' ? 'Sign in' : 'Create account'}
         </button>
       </form>
 
-      <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
-        <span className="h-px flex-1 bg-slate-200" />
-        <span>OR</span>
-        <span className="h-px flex-1 bg-slate-200" />
-      </div>
+      <div className="my-6 border-t border-slate-300" />
 
       <button
         type="button"
         onClick={handleGoogleSignIn}
         disabled={isSubmitting}
-        className="flex w-full items-center justify-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+        className="btn w-full gap-3"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.75 3.27-8.1Z" />
@@ -215,20 +213,34 @@ export function AuthForm() {
           <path fill="#FBBC05" d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.15a11 11 0 0 0 0 9.9l3.69-2.84Z" />
           <path fill="#EA4335" d="M12 4.36c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.54 10.54 0 0 0 12 0 11 11 0 0 0 2.15 7.05l3.69 2.84C6.71 7.29 9.14 4.36 12 4.36Z" />
         </svg>
-        {isSubmitting ? 'Processing...' : 'Continue with Google'}
+        Continue with Google
       </button>
 
-      <div className="mt-6 flex items-center justify-between gap-4 text-sm text-slate-500">
-        <button type="button" onClick={handlePasswordReset} className="font-medium text-accent-700 hover:text-accent-800">
+      <div className="mt-4 flex items-center justify-between gap-4 text-[15px]">
+        <button type="button" onClick={handlePasswordReset} className="min-h-[44px] font-medium text-accent-700 underline underline-offset-4 hover:text-accent-800">
           Forgot password?
         </button>
-        <button type="button" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="font-medium text-slate-700 hover:text-slate-900">
+        <button type="button" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="min-h-[44px] font-medium text-slate-700 underline underline-offset-4 hover:text-slate-900">
           {mode === 'login' ? 'Need an account?' : 'Already have one?'}
         </button>
       </div>
 
       {error ? <p className="mt-4 note note-error">{error}</p> : null}
       {message ? <p className="mt-4 note note-ok">{message}</p> : null}
+    </div>
+  );
+}
+
+/** The chalkboard beside the sign-in form: says which class this is. */
+export function AuthBoard() {
+  const { settings } = useClassSettings();
+  return (
+    <div className="flex flex-col justify-between gap-8 bg-accent-700 px-4 py-6 text-white sm:px-8 lg:min-h-screen lg:px-12 lg:py-12">
+      <Link href="/dashboard" className="text-[15px] text-accent-100 underline underline-offset-4 hover:text-white">Back to the class page</Link>
+      <div>
+        <p className="font-display text-4xl font-bold leading-tight tracking-tight lg:text-6xl">{settings.name}</p>
+        <p className="mt-3 max-w-xs text-base text-accent-100">Homework, calendar and announcements for your class, in one place.</p>
+      </div>
     </div>
   );
 }

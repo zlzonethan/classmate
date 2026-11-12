@@ -190,7 +190,7 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       <PageHeader
         eyebrow={homework?.subjectId || 'Class homework'}
         title={homework?.title || 'Homework details'}
@@ -202,7 +202,7 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
         }
       />
 
-      {loading ? <p className="rounded-lg bg-white p-5 text-slate-500">Loading homework…</p> : null}
+      {loading ? <p className="text-slate-500">Loading homework…</p> : null}
       {error ? <p role="alert" className="note note-error">{error}</p> : null}
       {message ? <p role="status" className="note note-ok">{message}</p> : null}
       {!loading && !user ? (
@@ -214,15 +214,15 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
       {homework && !loading ? (
         <article className="space-y-6 panel">
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border border-slate-200 p-4">
+            <div className="border-l-2 border-slate-300 pl-3">
               <p className="text-sm text-slate-500">Due date</p>
               <p className="mt-2 font-semibold text-slate-900">{homework.dueDate}{homework.dueTime ? ` at ${homework.dueTime}` : ''}</p>
             </div>
-            <div className="rounded-lg border border-slate-200 p-4">
+            <div className="border-l-2 border-slate-300 pl-3">
               <p className="text-sm text-slate-500">Subject</p>
               <p className="mt-2 font-semibold text-slate-900">{homework.subjectId}</p>
             </div>
-            <div className="rounded-lg border border-slate-200 p-4">
+            <div className="border-l-2 border-slate-300 pl-3">
               <p className="text-sm text-slate-500">Priority</p>
               <p className="mt-2 font-semibold capitalize text-slate-900">{homework.priority}</p>
             </div>
@@ -230,7 +230,7 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
 
           {homework.attachmentUrls?.length ? (
             <section>
-              <h2 className="font-semibold text-slate-900">Assignment materials</h2>
+              <h2 className="title text-xl">Assignment materials</h2>
               <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-accent-700">
                 {homework.attachmentUrls.map((url) => (
                   <li key={url}><a href={url} target="_blank" rel="noreferrer" className="underline">{url}</a></li>
@@ -244,10 +244,10 @@ export function HomeworkDetailClient({ homeworkId }: { homeworkId: string }) {
               <Link href="/auth" className="font-semibold underline">Sign in</Link> to submit your completed homework.
             </p>
           ) : (
-            <section className="rounded-lg border border-slate-200 p-5">
+            <section className="border-t border-slate-300 pt-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-semibold text-slate-900">Submit photo evidence</h2>
+                  <h2 className="title text-xl">Submit photo evidence</h2>
                 </div>
                 {submission ? (
                   <span className={`chip ${

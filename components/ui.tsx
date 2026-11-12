@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 /** A titled section on a page. */
@@ -18,8 +19,8 @@ export function Section({
     <section id={id} className="panel scroll-mt-20" aria-labelledby={id ? `${id}-title` : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 id={id ? `${id}-title` : undefined} className="text-base font-semibold text-slate-900">{title}</h2>
-          {description ? <p className="mt-0.5 text-sm text-slate-600">{description}</p> : null}
+          <h2 id={id ? `${id}-title` : undefined} className="title text-xl">{title}</h2>
+          {description ? <p className="mt-1 text-[15px] text-slate-600">{description}</p> : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
@@ -56,10 +57,10 @@ export function Toggle({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed ${
-          checked ? 'bg-accent-600' : 'bg-slate-300'
+          checked ? 'bg-accent-600' : 'bg-slate-400'
         }`}
       >
-        <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+        <span className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${checked ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
       </button>
     </div>
   );
@@ -70,4 +71,15 @@ export function SaveStatus({ status }: { status: 'idle' | 'saving' | 'saved' | '
   if (status === 'saved') return <span role="status" className="text-sm text-emerald-700">Saved</span>;
   if (status === 'error') return <span role="alert" className="text-sm text-red-700">Couldn’t save. Try again.</span>;
   return null;
+}
+
+/** Shown in place of a page's content when nobody is signed in. */
+export function SignInPrompt({ title, children }: { title: string; children?: ReactNode }) {
+  return (
+    <section className="panel">
+      <h2 className="title text-xl">{title}</h2>
+      {children ? <p className="mt-1 max-w-prose text-[15px] text-slate-600">{children}</p> : null}
+      <Link href="/auth" className="btn btn-primary mt-4">Sign in</Link>
+    </section>
+  );
 }

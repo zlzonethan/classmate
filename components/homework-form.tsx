@@ -198,7 +198,7 @@ export function HomeworkForm() {
           <datalist id="class-subject-options">
             {subjects.map((subject) => <option key={subject.id} value={subject.name} />)}
           </datalist>
-          <p className="mt-1.5 text-xs text-slate-500">Pick a suggestion or type any subject. New subjects are saved for the class when you publish.</p>
+          <p className="mt-1.5 text-sm text-slate-500">Pick a suggestion or type any subject. New subjects are saved for the class when you publish.</p>
         </div>
         <div>
           <label className="label mb-1.5">Priority</label>

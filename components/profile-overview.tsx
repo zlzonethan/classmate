@@ -127,9 +127,9 @@ export function ProfileOverview() {
   const initials = (displayName || user?.email?.split('@')[0] || 'S').slice(0, 1).toUpperCase();
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Profile</h1>
+        <h1 className="title text-[32px] leading-tight sm:text-4xl">Profile</h1>
       </header>
       <section className="panel">
 
@@ -167,7 +167,7 @@ export function ProfileOverview() {
                     disabled={saving}
                   />
                 </label>
-                <p className="mt-2 text-xs text-slate-500">Paste a direct link to an image. Leave blank to use your initials.</p>
+                <p className="mt-2 text-sm text-slate-500">Paste a direct link to an image. Leave blank to use your initials.</p>
               </div>
               <div className="min-w-0 sm:text-right">
                 <p className="font-semibold text-slate-900">{user?.email}</p>
@@ -208,7 +208,7 @@ export function ProfileOverview() {
 
       <section className="panel">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-900">Stats</h2>
+          <h2 className="title text-xl">Stats</h2>
           <Link href="/leaderboard" className="text-sm font-semibold text-accent-700 hover:text-accent-800">Leaderboard</Link>
         </div>
         <p className="mb-4 note note-warn">
@@ -216,10 +216,10 @@ export function ProfileOverview() {
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           {quickStats.map((stat) => (
-            <article key={stat.label} className="rounded-lg border border-slate-200 p-4">
+            <article key={stat.label} className="border-l-2 border-slate-300 pl-3">
               <p className="text-sm text-slate-500">{stat.label}</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">{stat.value}</p>
-              <p className="mt-1 text-xs font-medium text-slate-500">{stat.change}</p>
+              <p className="mt-1 text-sm text-slate-500">{stat.change}</p>
             </article>
           ))}
         </div>

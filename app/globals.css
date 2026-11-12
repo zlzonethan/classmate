@@ -2,39 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Direction: the weekly plan pinned to the back wall of a classroom.
+  Paper, black ink, chalkboard green, and a red pen for deadlines.
+  Type: a serif for titles (font-display), a sans for everything else.
+  Spacing: multiples of 4px. Sections are separated by ruled lines, not boxes.
+*/
+
 body {
-  background: #f7f7f5;
-  color: #1c1d1f;
-  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Noto Sans KR', 'Segoe UI', Roboto, sans-serif;
+  background: theme('colors.paper');
+  color: theme('colors.slate.900');
+  font-family: theme('fontFamily.sans');
 }
 
 @layer base {
   :focus-visible {
-    outline: 2px solid theme('colors.accent.500');
+    outline: 2px solid theme('colors.accent.600');
     outline-offset: 2px;
+  }
+
+  ::selection {
+    background: theme('colors.accent.200');
   }
 }
 
 @layer components {
-  /* A plain white surface. Used once per section, never nested. */
+  /* A section on the page: a ruled line on top, content straight on the paper. */
   .panel {
-    @apply rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] md:p-5;
+    @apply border-t-2 border-slate-900 pt-4;
+  }
+
+  /* The serif used for page and section titles. */
+  .title {
+    @apply font-display font-bold tracking-tight text-slate-900;
   }
 
   .btn {
-    @apply inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-800 transition-colors shadow-[0_1px_1px_rgba(15,23,42,0.04)] hover:bg-slate-50 active:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-md border border-slate-400 bg-white px-4 text-[15px] font-medium text-slate-900 transition-colors hover:border-slate-900 active:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply border-accent-600 bg-accent-600 text-white hover:border-accent-700 hover:bg-accent-700 active:bg-accent-800;
+    @apply border-accent-600 bg-accent-600 text-white hover:border-accent-800 hover:bg-accent-800 active:bg-accent-800;
   }
 
   .btn-danger {
-    @apply border-slate-300 text-red-700 hover:border-red-300 hover:bg-red-50;
+    @apply text-red-700 hover:border-red-700 hover:bg-red-50;
   }
 
   .btn-sm {
-    @apply min-h-[32px] px-2.5 text-[13px];
+    @apply min-h-[36px] px-3 text-sm;
   }
 
   .label {
@@ -42,30 +58,36 @@ body {
   }
 
   .input {
-    @apply block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[15px] text-slate-900 placeholder:text-slate-400 focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-100;
+    @apply block min-h-[44px] w-full rounded-md border border-slate-400 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-400 focus:border-accent-600 focus:outline-none focus:ring-2 focus:ring-accent-200;
   }
 
   .chip {
-    @apply inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center rounded-sm px-1.5 py-0.5 text-xs font-medium;
   }
 
+  /* An inline message. A coloured rule on the left says what kind. */
   .note {
-    @apply rounded-md border px-3 py-2.5 text-sm;
+    @apply border-l-2 px-3 py-2 text-[15px];
   }
 
   .note-info {
-    @apply border-slate-200 bg-slate-50 text-slate-700;
+    @apply border-slate-400 bg-slate-50 text-slate-700;
   }
 
   .note-warn {
-    @apply border-amber-200 bg-amber-50 text-amber-900;
+    @apply border-slate-900 bg-slate-100 text-slate-900;
   }
 
   .note-error {
-    @apply border-red-200 bg-red-50 text-red-800;
+    @apply border-red-600 bg-red-50 text-red-800;
   }
 
   .note-ok {
-    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+    @apply border-accent-600 bg-accent-50 text-accent-800;
+  }
+
+  /* A list row with a fixed date column on the left, like a planner page. */
+  .row {
+    @apply grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-4 py-3 sm:grid-cols-[7rem_minmax(0,1fr)];
   }
 }

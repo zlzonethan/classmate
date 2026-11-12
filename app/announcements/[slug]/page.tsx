@@ -70,7 +70,7 @@ export default function AnnouncementDetailPage({ params }: { params: { slug: str
 
   return (
     <DashboardShell navItems={getAppNavigation('announcements')}>
-      <div className="space-y-5">
+      <div className="space-y-8">
         <PageHeader
                     title={announcement?.title || 'Announcement'}
           description={announcement ? `Posted by ${announcement.authorName}${announcement.createdAt ? ` · ${announcement.createdAt}` : ''}` : 'Read the latest update from your class.'}
@@ -80,7 +80,7 @@ export default function AnnouncementDetailPage({ params }: { params: { slug: str
             </Link>
           }
         />
-        {loading ? <p className="rounded-lg bg-white p-5 text-slate-500">Loading announcement…</p> : null}
+        {loading ? <p className="text-slate-500">Loading announcement…</p> : null}
         {error ? <p role="alert" className="note note-warn">{error}</p> : null}
         {announcement && !loading ? (
           <article className="panel">

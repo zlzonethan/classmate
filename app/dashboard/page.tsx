@@ -6,7 +6,7 @@ import { getAppNavigation } from '@/lib/app-navigation';
 export default function DashboardPage() {
   return (
     <DashboardShell navItems={getAppNavigation('dashboard')}>
-      <div className="space-y-5">
+      <div className="space-y-8">
         <DashboardGreeting />
         <HomeworkOverview />
         <RecentAnnouncements />

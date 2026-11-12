@@ -6,7 +6,7 @@ import { getAppNavigation } from '@/lib/app-navigation';
 export default function CalendarPage() {
   return (
     <DashboardShell navItems={getAppNavigation('calendar')}>
-      <div className="space-y-5">
+      <div className="space-y-8">
         <PageHeader
           eyebrow="Schedule"
           title="Calendar"

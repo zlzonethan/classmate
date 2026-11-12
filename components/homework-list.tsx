@@ -9,6 +9,7 @@ import type { HomeworkRecord } from '@/lib/firestore-schema';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/lib/firebase';
 import { getClassHomework } from '@/lib/homework-client';
 import { formatDue } from '@/lib/format';
+import { SignInPrompt } from '@/components/ui';
 
 type HomeworkEvidence = {
   id: string;
@@ -342,7 +343,7 @@ export function HomeworkList() {
 
       {editingHomeworkId && editValues ? (
         <form onSubmit={saveHomeworkEdits} className="panel space-y-4 border-accent-300">
-          <h2 className="text-xl font-semibold text-slate-900">Edit homework</h2>
+          <h2 className="title text-xl">Edit homework</h2>
           <label className="label">
             Title
             <input value={editValues.title} onChange={(event) => setEditValues({ ...editValues, title: event.target.value })} maxLength={120} required className="mt-1.5 input" />
@@ -379,8 +380,8 @@ export function HomeworkList() {
       ) : null}
 
       {canReview && pendingSubmissions.length > 0 ? (
-        <section className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-          <h2 className="font-semibold text-slate-900">Waiting for your review ({pendingSubmissions.length})</h2>
+        <section className="border-l-2 border-accent-600 bg-slate-50 p-4">
+          <h2 className="title text-xl">Waiting for your review ({pendingSubmissions.length})</h2>
           <ul className="mt-3 space-y-3">
             {pendingSubmissions.map((submission) => (
               <li key={submission.id} className="rounded-md border border-slate-200 bg-white p-3">
@@ -410,22 +411,22 @@ export function HomeworkList() {
       ) : null}
 
       {!signedIn ? (
-        <p className="note note-info">
-          <Link href="/auth" className="font-medium underline">Sign in</Link> to see your class homework.
-        </p>
+        <SignInPrompt title="Sign in to see your class homework">
+          Homework is shared with your class only. Once you’re in, you can read the details and send a photo as proof.
+        </SignInPrompt>
       ) : items.length === 0 ? (
-        <p className="panel text-center text-slate-600">No homework has been posted yet.</p>
+        <p className="panel text-slate-600">No homework has been posted yet.</p>
       ) : (
         <section className="panel">
           {subjects.length > 2 ? (
-            <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label="Filter by subject">
+            <div className="mb-2 flex flex-wrap gap-2" role="group" aria-label="Filter by subject">
               {subjects.map((subject) => (
                 <button
                   key={subject}
                   type="button"
                   onClick={() => setSelectedSubject(subject)}
                   aria-pressed={selectedSubject === subject}
-                  className={`rounded-md px-2.5 py-1.5 text-sm ${selectedSubject === subject ? 'bg-slate-800 font-medium text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                  className={`min-h-[36px] rounded-md border px-3 text-sm ${selectedSubject === subject ? 'border-slate-900 bg-slate-900 font-medium text-white' : 'border-slate-300 text-slate-700 hover:border-slate-900'}`}
                 >
                   {subject}
                 </button>
@@ -441,13 +442,16 @@ export function HomeworkList() {
                 : undefined;
               const href = `/homework/${item.id ?? encodeURIComponent(item.title)}`;
               return (
-                <li key={item.id || item.title} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
-                  <div className="min-w-0 flex-1 basis-56">
-                    <Link href={href} className="font-medium text-slate-900 hover:underline">{item.title}</Link>
-                    <p className="mt-0.5 text-sm text-slate-600">
+                <li key={item.id || item.title} className="row items-start">
+                  <p className="text-[15px] tabular-nums">
+                    <span className={`block font-medium ${due.urgent ? 'text-red-700' : 'text-slate-900'}`}>{due.when}</span>
+                    {due.time ? <span className="block text-slate-500">{due.time}</span> : null}
+                  </p>
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <div className="min-w-0 flex-1 basis-48">
+                    <Link href={href} className="font-medium text-slate-900 underline-offset-4 hover:underline">{item.title}</Link>
+                    <p className="text-[15px] text-slate-600">
                       {getSubjectName(item.subjectId)}
-                      <span className="text-slate-400"> · </span>
-                      <span className={due.urgent ? 'font-medium text-red-700' : ''}>{due.label}</span>
                       {item.priority === 'high' ? <span className="chip ml-2 bg-red-50 text-red-700">Important</span> : null}
                     </p>
                   </div>
@@ -467,6 +471,7 @@ export function HomeworkList() {
                         <button type="button" disabled={submittingId === item.id} onClick={() => void deleteHomework(item)} className="btn btn-danger btn-sm">Delete</button>
                       </>
                     ) : null}
+                  </div>
                   </div>
                 </li>
               );

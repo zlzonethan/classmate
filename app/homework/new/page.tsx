@@ -7,7 +7,7 @@ import { getAppNavigation } from '@/lib/app-navigation';
 export default function NewHomeworkPage() {
   return (
     <DashboardShell navItems={getAppNavigation('homework')}>
-      <div className="space-y-5">
+      <div className="space-y-8">
         <PageHeader
           title="Add homework"
           description="It appears in everyone’s homework list and on the class calendar."

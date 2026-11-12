@@ -1,7 +1,7 @@
 /** Turns a due date into a short label such as "Due tomorrow · 20:00". */
 export function formatDue(dueDate: string, dueTime?: string) {
   const date = new Date(`${dueDate}T${dueTime || '23:59'}:00`);
-  if (Number.isNaN(date.getTime())) return { label: `Due ${dueDate}`, urgent: false };
+  if (Number.isNaN(date.getTime())) return { label: `Due ${dueDate}`, when: dueDate, time: dueTime || '', urgent: false };
 
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -16,7 +16,10 @@ export function formatDue(dueDate: string, dueTime?: string) {
         ? 'Due tomorrow'
         : `Due ${day}`;
 
-  return { label: dueTime ? `${label} · ${dueTime}` : label, urgent: days <= 0 };
+  // `when` and `time` are the same information split for the date column of a list.
+  const when = days < 0 ? 'Overdue' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : day;
+
+  return { label: dueTime ? `${label} · ${dueTime}` : label, when, time: dueTime || (days < 0 ? day : ''), urgent: days <= 0 };
 }
 
 export function formatDay(iso: string) {

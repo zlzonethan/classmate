@@ -8,7 +8,7 @@ import { getAppNavigation } from '@/lib/app-navigation';
 export default function HomeworkPage() {
   return (
     <DashboardShell navItems={getAppNavigation('homework')}>
-      <div className="space-y-5">
+      <div className="space-y-8">
         <PageHeader
           title="Homework"
           description="Sorted by due date. Open one to read the details or submit your proof."

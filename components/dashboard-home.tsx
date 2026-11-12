@@ -20,17 +20,17 @@ export function DashboardGreeting() {
 
   return (
     <div className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div>
-          <p className="min-h-[1.25rem] text-sm text-slate-500">{today}</p>
-          <h1 className="mt-0.5 text-[26px] font-semibold leading-tight tracking-tight text-slate-900">
-            {loading ? '\u00a0' : user ? `Hello, ${displayName.split(' ')[0]}` : settings.name}
-          </h1>
+          <p className="min-h-[1.5rem] text-[15px] text-slate-600">
+            {loading ? '' : user ? `Hello, ${displayName.split(' ')[0]}` : 'Today'}
+          </p>
+          <h1 className="title mt-1 min-h-[2.5rem] text-[32px] leading-tight sm:min-h-[2.8rem] sm:text-4xl">{today}</h1>
         </div>
         {isStaff ? <Link href="/homework/new" className="btn btn-primary">Add homework</Link> : null}
       </header>
       {settings.homeMessage ? (
-        <p className="rounded-lg border border-accent-200 bg-accent-50 px-4 py-3 text-[15px] text-accent-800">
+        <p className="max-w-prose border-l-2 border-accent-600 pl-3 text-base text-slate-700">
           {settings.homeMessage}
         </p>
       ) : null}
@@ -40,12 +40,14 @@ export function DashboardGreeting() {
 
 type Post = { id: string; title: string; content: string; pinned: boolean; date: string; href: string };
 
-const samplePosts: Post[] = announcementFeed.slice(0, 3).map((item) => ({
+const sampleDates = ['Today', 'Yesterday', '2 days ago'];
+
+const samplePosts: Post[] = announcementFeed.slice(0, 3).map((item, index) => ({
   id: item.slug,
   title: item.title,
   content: item.content,
   pinned: item.pinned,
-  date: '',
+  date: sampleDates[index] || '',
   href: `/announcements/${item.slug}`,
 }));
 
@@ -93,8 +95,8 @@ export function RecentAnnouncements() {
   return (
     <section className="panel">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-900">Announcements</h2>
-        <Link href="/announcements" className="text-sm font-medium text-accent-600 hover:underline">See all</Link>
+        <h2 className="title text-xl">Announcements</h2>
+        <Link href="/announcements" className="-my-2 py-2 text-[15px] font-medium text-accent-700 underline underline-offset-4 hover:text-accent-800">See all</Link>
       </div>
 
       {posts === null ? (
@@ -102,22 +104,24 @@ export function RecentAnnouncements() {
       ) : posts.length === 0 ? (
         <p className="mt-3 text-slate-600">No announcements yet.</p>
       ) : (
-        <ul className="mt-1 divide-y divide-slate-200">
+        <ul className="mt-2 divide-y divide-slate-200">
           {posts.map((post) => (
             <li key={post.id}>
-              <Link href={post.href} className="-mx-2 block rounded-md px-2 py-3 hover:bg-slate-50">
-                <p className="font-medium text-slate-900">
-                  {post.title}
-                  {post.pinned ? <span className="chip ml-2 bg-amber-50 text-amber-800">Pinned</span> : null}
-                </p>
-                <p className="mt-0.5 line-clamp-2 text-sm text-slate-600">{post.content}</p>
-                {post.date ? <p className="mt-1 text-xs text-slate-500">{post.date}</p> : null}
+              <Link href={post.href} className="row group">
+                <span className="text-[15px] text-slate-600">
+                  <span className="block">{post.date}</span>
+                  {post.pinned ? <span className="chip mt-1 bg-slate-900 text-paper">Pinned</span> : null}
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-medium text-slate-900 underline-offset-4 group-hover:underline">{post.title}</span>
+                  <span className="mt-0.5 line-clamp-2 text-[15px] text-slate-600">{post.content}</span>
+                </span>
               </Link>
             </li>
           ))}
         </ul>
       )}
-      {isSample ? <p className="mt-2 text-xs text-slate-500">These are examples. Sign in to see your class’s posts.</p> : null}
+      {isSample ? <p className="mt-2 text-sm text-slate-500">These are examples. Sign in to see your class’s posts.</p> : null}
     </section>
   );
 }

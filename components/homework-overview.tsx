@@ -64,8 +64,8 @@ export function HomeworkOverview() {
   return (
     <section className="panel">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-900">Homework due next</h2>
-        <Link href="/homework" className="text-sm font-medium text-accent-600 hover:underline">See all</Link>
+        <h2 className="title text-xl">Homework due next</h2>
+        <Link href="/homework" className="-my-2 py-2 text-[15px] font-medium text-accent-700 underline underline-offset-4 hover:text-accent-800">See all</Link>
       </div>
 
       {loading ? (
@@ -75,27 +75,30 @@ export function HomeworkOverview() {
       ) : items.length === 0 ? (
         <p className="mt-3 text-slate-600">Nothing due. You’re all caught up.</p>
       ) : (
-        <ul className="mt-1 divide-y divide-slate-200">
+        <ul className="mt-2 divide-y divide-slate-200">
           {items.slice(0, 5).map((item) => {
             const due = formatDue(item.dueDate, item.dueTime);
             return (
               <li key={item.id || item.title}>
                 <Link
                   href={item.id && !item.id.startsWith('demo-') ? `/homework/${item.id}` : '/homework'}
-                  className="-mx-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 rounded-md px-2 py-3 hover:bg-slate-50"
+                  className="row group"
                 >
-                  <span className="min-w-0">
-                    <span className="font-medium text-slate-900">{item.title}</span>
-                    <span className="ml-2 text-sm text-slate-500">{item.subjectId}</span>
+                  <span className="text-[15px] tabular-nums">
+                    <span className={`block font-medium ${due.urgent ? 'text-red-700' : 'text-slate-900'}`}>{due.when}</span>
+                    {due.time ? <span className="block text-slate-500">{due.time}</span> : null}
                   </span>
-                  <span className={`shrink-0 text-sm ${due.urgent ? 'font-medium text-red-700' : 'text-slate-600'}`}>{due.label}</span>
+                  <span className="min-w-0">
+                    <span className="block font-medium text-slate-900 underline-offset-4 group-hover:underline">{item.title}</span>
+                    <span className="block text-[15px] text-slate-600">{item.subjectId}</span>
+                  </span>
                 </Link>
               </li>
             );
           })}
         </ul>
       )}
-      {usingDemoData ? <p className="mt-2 text-xs text-slate-500">These are examples. Sign in to see your class’s homework.</p> : null}
+      {usingDemoData ? <p className="mt-2 text-sm text-slate-500">These are examples. Sign in to see your class’s homework.</p> : null}
     </section>
   );
 }
